@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #F4EFE8;
+  --color-on-background: #1E2423;
+  
+  --color-surface-lowest: #E4DDD2;
+  --color-surface-low: #ECE6DD;
+  --color-surface: #F4EFE8;
+  --color-surface-high: #F9F7F2;
+  --color-surface-highest: #FFFFFF;
+  
+  --color-on-surface: #1E2423;
+  
+  --color-primary: #1E2423;
+  --color-on-primary: #F4EFE8;
+  
+  --color-accent: #5E908C;
+  --color-accent-teal: #5E908C;
+  --color-accent-mint: #8DB8AE;
+  --color-accent-peach: #E3A06C;
+  --color-accent-coral: #D9897B;
+  --color-accent-lavender: #B8A8D8;
+  
+  --color-text-main: #1E2423;
+  --color-text-muted: #5D6663;
+  
+  /* Legacy mapping for surface containers */
+  --color-surface-container-lowest: #E4DDD2;
+  --color-surface-container-low: #ECE6DD;
+  --color-surface-container: #F4EFE8;
+  --color-surface-container-high: #F9F7F2;
+  --color-surface-container-highest: #FFFFFF;
+  
+  --font-bodoni: "Bodoni Moda", serif;
+  --font-inter: "Inter", sans-serif;
+
+  --spacing-section-gap: 48px;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-text-main font-inter antialiased selection:bg-accent selection:text-white overflow-x-hidden;
+    font-size: 16px;
+  }
+
+  .dark-theme {
+    --color-background: #ECE6DD;
+    --color-on-background: #1E2423;
+    --color-surface: #F4EFE8;
+    --color-primary: #5E908C;
+    --color-text-main: #1E2423;
+    --color-text-muted: #5D6663;
+  }
+}
+
+@layer utilities {
+  .text-h1 {
+    font-size: clamp(40px, 5vw, 72px);
+    line-height: 1.1;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+    font-family: var(--font-bodoni);
+  }
+
+  .text-h2 {
+    font-size: clamp(24px, 3.5vw, 36px);
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    font-family: var(--font-bodoni);
+    font-style: italic;
+  }
+
+  .text-h3 {
+    font-size: clamp(18px, 2.5vw, 22px);
+    line-height: 1.3;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-family: var(--font-bodoni);
+  }
+
+  .text-label {
+    font-size: 12px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .glass-effect {
+    backdrop-filter: blur(16px);
+    background: rgba(244, 239, 232, 0.85);
+    border-bottom: 1px solid rgba(30, 36, 35, 0.08);
+  }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  .editorial-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 24px;
+  }
+
+  .horizontal-scroll {
+    display: flex;
+    overflow-x: auto;
+    gap: 20px;
+    padding-bottom: 16px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .horizontal-scroll > * {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+
+  .soft-shadow {
+    box-shadow: 0 12px 30px -15px rgba(30,36,35,0.08);
+  }
+}
