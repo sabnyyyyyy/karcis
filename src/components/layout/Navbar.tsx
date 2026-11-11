@@ -22,6 +22,7 @@ const landingLinks = [
 const appLinks = [
   { name: "Beranda", href: "/" },
   { name: "Event", href: "/events" },
+  { name: "Pasar Tiket", href: "/resale" },
   { name: "Cara Kerja", href: "/how-it-works" },
 ];
 
@@ -85,12 +86,14 @@ export const Navbar = () => {
   const isOrganizer = profile?.activeRole === "organizer";
 
   return (
-    <header
-      className={cn(
-        "fixed top-0 w-full z-[100] h-16 flex items-center px-6 md:px-12 justify-between transition-colors duration-500 backdrop-blur-md",
-        onDark ? "bg-black/45 text-white" : "bg-white/80 text-[#141414]"
-      )}
-    >
+    <header className="fixed top-3 md:top-4 inset-x-0 z-[100] px-3 md:px-6 pointer-events-none">
+      {/* bar melayang berujung bulat (pill): tidak lagi selebar layar */}
+      <div
+        className={cn(
+          "pointer-events-auto relative mx-auto max-w-[1180px] h-14 md:h-[60px] flex items-center justify-between rounded-full border pl-6 pr-2 md:pl-8 md:pr-2.5 backdrop-blur-xl shadow-[0_12px_40px_-18px_rgba(0,0,0,0.55)] transition-colors duration-500",
+          onDark ? "bg-black/45 border-white/12 text-white" : "bg-white/75 border-[#141414]/10 text-[#141414]"
+        )}
+      >
       <Link href="/" aria-label="Karcis">
         <span
           className={cn(
@@ -215,6 +218,7 @@ export const Navbar = () => {
             Hubungkan Wallet <ArrowUpRight className="w-3.5 h-3.5" />
           </button>
         )}
+      </div>
       </div>
     </header>
   );

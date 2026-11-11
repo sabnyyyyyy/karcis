@@ -109,6 +109,7 @@ export interface ChainConfig {
   stable_token: string;
   treasury: string;
   verifier: string;
+  admin: string;
   service_fee_bps: number;
   clip_pool_bps: number;
   referral_pool_bps: number;
@@ -128,4 +129,39 @@ export interface ChainNft {
     issued_at: string | null;
     extra: string | null;
   };
+}
+
+export type ChainOrganizerStatus = "ACTIVE" | "SUSPENDED" | "BANNED";
+
+export interface ChainCase {
+  at: string;
+  kind: "REPORT" | "SUSPEND" | "BAN" | "REINSTATE" | "PROFILEUPDATE";
+  by: string;
+  reason: string;
+}
+
+export interface ChainOrganizer {
+  account_id: string;
+  profile: { name: string; org_type: string; city: string; contact: string; description: string };
+  status: ChainOrganizerStatus;
+  registered_at: string;
+  status_changed_at: string;
+  /** Jumlah laporan dari pembeli */
+  reports: number;
+  cases: ChainCase[];
+}
+
+/** Pass yang sedang dijual ulang di pasar tiket */
+export interface ChainListing {
+  pass_id: string;
+  event_id: string;
+  tier_id: string;
+  seller: string;
+  /** Harga yang dibayar pembeli (unit token) */
+  price: string;
+  /** Harga asli pass = batas harga jual ulang */
+  face_value: string;
+  platform_fee: string;
+  seller_receives: string;
+  listed_at: string;
 }

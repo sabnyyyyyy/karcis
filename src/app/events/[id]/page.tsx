@@ -25,11 +25,12 @@ import { Badge } from "@/components/ui/badge";
 import { useSavedStore } from "@/store/useSavedStore";
 import { useHydrated } from "@/lib/useHydrated";
 import { useNearWallet } from "@/providers/NearWalletProvider";
-import { useCampaign, useChainEvent, useQuote } from "@/lib/chain/hooks";
+import { useCampaign, useChainEvent, useOrganizer, useQuote } from "@/lib/chain/hooks";
 import { fmtIdr, fmtPrice, fmtUsdc } from "@/lib/chain/format";
 import { explainChainError } from "@/lib/chain/errors";
 import { joinCampaignTx } from "@/lib/chain/builders";
 import { isEnded, isSoldOut } from "@/data/events";
+import { OrganizerTrust } from "@/components/organizer/OrganizerTrust";
 
 const refKey = (eventId: string) => `karcis-ref-${eventId}`;
 
@@ -70,6 +71,7 @@ function EventDetail() {
 
   const selectedTier = event?.tiers.find((t) => t.id === (tierId ?? event.tiers[0]?.id)) ?? event?.tiers[0];
   const quote = useQuote(event?.id, selectedTier?.id);
+  const organizer = useOrganizer(event?.ownerAccount);
 
   if (isLoading) return <main className="min-h-screen bg-background" />;
 
@@ -88,7 +90,8 @@ function EventDetail() {
   const ended = isEnded(event);
   const soldOut = isSoldOut(event);
   const needsFunding = !!event.campaign && !event.campaign.funded;
-  const canBuy = !ended && !soldOut && !needsFunding;
+  const suspended = !!organizer.data && organizer.data.status !== "ACTIVE";
+  const canBuy = !ended && !soldOut && !needsFunding && !suspended;
   const joined = !!accountId && !!campaign.data?.participants.includes(accountId);
   const isOwner = accountId === event.ownerAccount;
   const refLink = typeof window !== "undefined" && accountId ? `${window.location.origin}/events/${event.id}?ref=${accountId}` : "";
@@ -221,6 +224,8 @@ function EventDetail() {
                 <p className="text-sm text-text-muted">{event.address}</p>
               </div>
             </div>
+
+            <OrganizerTrust account={event.ownerAccount} name={event.organizer} />
 
             {/* Kampanye */}
             {event.campaign && (

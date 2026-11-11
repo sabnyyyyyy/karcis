@@ -122,6 +122,30 @@ NEAR menarik 0,00001 NEAR per byte yang disimpan. Hasil ukur (`storage_cost_repo
 Event log: `nft_mint` (NEP-171), serta `pass_minted`, `check_in`, `event_created`, `campaign_funded`, `campaign_joined`,
 `campaign_settled`, `payout_failed` (standar `karcis`).
 
+## Registri penyelenggara (on-chain)
+
+Pendaftaran penyelenggara dicatat di kontrak supaya bisa dilacak jika ada kasus.
+
+- `register_organizer(profile)` (payable): nama, jenis, kota, kontak (wajib), deskripsi. Wajib sebelum `create_event` dan `create_poll`. Profil bisa diubah lewat `update_organizer_profile` (mis. pindah kota); nilai lamanya otomatis masuk riwayat kasus (jenis `PROFILEUPDATE`), jadi perubahan tetap transparan. Akun yang diblokir tidak bisa mengubah profil.
+- `report_organizer(organizer, reason)` (payable): hanya pemegang pass dari event milik penyelenggara itu, satu laporan per akun, alasan minimal 10 karakter. Pelapor membayar penyimpanan catatannya.
+- Admin (`admin`, awalnya = verifier; bisa dialihkan lewat `set_admin`): `suspend_organizer`, `ban_organizer`, `reinstate_organizer`, masing-masing dengan alasan yang tercatat.
+- Dampak status: **SUSPENDED** dan **BANNED** menghentikan penjualan pass (berbayar dan gratis), pembuatan event, dan voting. **BANNED** juga menolak `check_in` supaya stempel tidak bisa ditambang dari event bermasalah. Pembeli yang sudah bayar tetap bisa check-in saat SUSPENDED.
+- View: `get_organizer`, `get_organizers(from_index, limit)`, `organizers_count`, `get_admin`. Setiap catatan punya riwayat kasus (laporan + tindakan admin, maks 100).
+- Migrasi dari versi sebelumnya: `migrate(admin)` (hanya akun kontrak sendiri) mendaftarkan otomatis semua pemilik event yang sudah ada.
+- Catatan deploy: build lalu `wasm-opt -Oz --enable-bulk-memory --signext-lowering` (binaryen) menurunkan ukuran ±20%, penting karena tiap KB kode menahan 0,01 NEAR.
+
+## Pasar tiket (jual ulang)
+
+Pemegang pass yang tidak jadi hadir bisa menjualnya. Pass bersifat soulbound, jadi "pindah tangan" dilakukan dengan burn + mint ulang.
+
+- `list_pass_for_resale(pass_id, price)` (payable, penjual membayar storage listing): hanya pemilik, pass belum discan, event belum selesai, pass berbayar. **Harga maksimal harga asli pass** (anti calo) dan minimal `min_paid_price`.
+- Pembeli bayar stablecoin lewat `ft_transfer_call` dengan `msg = {"action":"buy_resale","pass_id":"..."}`. Dalam satu transaksi: listing dihapus, **pass lama di-burn** (event NEP-171 `nft_burn`), pembeli menerima **pass baru** (`nft_mint`) dengan tier dan jumlah stempel yang sama. Kelebihan bayar dikembalikan.
+- ID pass baru memakai nomor urut `kapasitas + n` (mis. `GIGS12-0501`), jadi tidak pernah bentrok dengan nomor penjualan awal. `sold` dan kapasitas event tidak berubah.
+- Uang: penjual menerima harga dikurangi **3,4% biaya platform** (ke treasury). Tanpa biaya promosi dan tanpa referral.
+- `cancel_resale(pass_id)` oleh penjual. `check_in` menghapus listing otomatis. Pembelian ditolak jika penyelenggara ditangguhkan/diblokir atau event sudah selesai. Pass gratis tidak bisa dijual ulang.
+- View: `get_listings(from_index, limit)`, `get_listing`, `listings_count`. `nft_total_supply` = mint - burn.
+- Migrasi: `migrate()` (hanya akun kontrak) menambah koleksi pasar tanpa menyentuh data lama.
+
 ## Token stablecoin
 
 | Jaringan | Token | Alamat | Desimal |

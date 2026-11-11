@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
+import { NearLogo } from "@/components/ui/NearLogo";
 
 const LIME = "#9CFF1E";
 
@@ -24,58 +25,114 @@ const LETTERS = [
 ];
 
 /**
- * Huruf berisi api putih: dasar gelap, gradasi putih panas dari bawah,
- * dan lidah api yang naik berulang. Semua di-mask oleh bentuk huruf.
- * Posisi & tempo lidah api diturunkan dari index (tanpa Math.random) agar SSR = klien.
+ * Huruf berisi api putih berasap.
+ * - Tekstur helai api (public/flame-noise.png, prosedural & bisa di-tile) digeser naik di dua lapisan
+ *   dengan kecepatan beda. Hanya `transform`, jadi jalan di GPU dan ringan.
+ * - Bentuk huruf dipakai sebagai CSS mask. Tepi yang bergelombang (turbulence) di-"bake" sekali
+ *   ke dalam gambar mask, tidak dihitung ulang tiap frame.
+ * - Mask kedua yang lebih lebar + blur membuat kabut api menjilat keluar dari kotak foto.
+ * Semua parameter diturunkan dari index (tanpa Math.random) agar SSR = klien.
  */
-const FLAMES = 13;
-function FlameLetter({ d, index }: { d: string; index: number }) {
-  const id = `fl${index}`;
-  const tongues = Array.from({ length: FLAMES }, (_, k) => {
-    const x = 6 + k * (88 / (FLAMES - 1)) + (((k * 37 + index * 11) % 7) - 3);
-    const dur = 1.5 + ((k * 13 + index * 7) % 11) / 10; // 1.5 - 2.6 dtk
-    const delay = -(((k * 17 + index * 5) % 25) / 10); // negatif: sudah berjalan sejak awal
-    const w = 0.8 + (((k * 7 + index * 3) % 5) / 10); // lebar 0.8 - 1.2
-    return { x, dur, delay, w };
-  });
+function maskUri(d: string, opts: { sw: number; disp: number; blur: number; seed: number; join: "miter" | "round" }) {
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -30 120 130" width="360" height="390">` +
+    `<filter id="f" x="-20%" y="-20%" width="140%" height="140%">` +
+    `<feTurbulence type="fractalNoise" baseFrequency="0.03 0.07" numOctaves="2" seed="${opts.seed}" result="t"/>` +
+    `<feDisplacementMap in="SourceGraphic" in2="t" scale="${opts.disp}" xChannelSelector="R" yChannelSelector="G"/>` +
+    (opts.blur ? `<feGaussianBlur stdDeviation="${opts.blur}"/>` : "") +
+    `</filter><g filter="url(#f)"><path d="${d}" fill="none" stroke="#fff" stroke-width="${opts.sw}" stroke-linejoin="${opts.join}"/></g></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+function maskStyle(uri: string): React.CSSProperties {
+  return {
+    maskImage: uri,
+    WebkitMaskImage: uri,
+    maskSize: "100% 100%",
+    WebkitMaskSize: "100% 100%",
+    maskRepeat: "no-repeat",
+    WebkitMaskRepeat: "no-repeat",
+  };
+}
+
+/** Lapisan tekstur api yang meluncur naik; tinggi lapisan 253.8% dari wadah (330 dari 130 unit). */
+export function FlameScroll({
+  src = "/flame-noise.png",
+  tileW,
+  tileH,
+  dur,
+  delay = 0,
+  offX = 0,
+  opacity = 1,
+}: {
+  src?: string;
+  tileW: number; // lebar 1 tile, % dari lebar lapisan
+  tileH: number; // tinggi 1 tile, % dari tinggi lapisan
+  dur: number;
+  delay?: number;
+  offX?: number;
+  opacity?: number;
+}) {
   return (
-    <svg
-      viewBox="0 0 100 100"
-      className="absolute inset-0 w-full h-full"
-      style={{ filter: "drop-shadow(0 0 3px rgba(255,255,255,0.55))" }}
+    <div
+      className="flame-scroll absolute left-0 right-0 top-0"
+      style={{
+        height: "253.85%",
+        opacity,
+        backgroundImage: `url(${src})`,
+        backgroundSize: `${tileW}% ${tileH}%`,
+        backgroundPosition: `${offX}% 0`,
+        backgroundRepeat: "repeat",
+        willChange: "transform",
+        animationDuration: `${dur}s`,
+        animationDelay: `${-delay}s`,
+        ["--flame-dist" as string]: `-${tileH}%`,
+      }}
+    />
+  );
+}
+
+function FlameLetter({ d, index }: { d: string; index: number }) {
+  const inner = useMemo(() => maskUri(d, { sw: 15, disp: 8, blur: 0, seed: index + 3, join: "miter" }), [d, index]);
+  const halo = useMemo(() => maskUri(d, { sw: 27, disp: 18, blur: 1.6, seed: index + 11, join: "round" }), [d, index]);
+  const durA = 3.4 + (index % 3) * 0.45;
+  const durB = 2.2 + (index % 2) * 0.35;
+  return (
+    <div
       aria-hidden
+      className="absolute pointer-events-none"
+      style={{ left: "-10%", top: "-30%", width: "120%", height: "130%" }}
     >
-      <defs>
-        <mask id={`${id}m`} maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
-          <path d={d} fill="none" stroke="#fff" strokeWidth="15" strokeLinejoin="miter" strokeLinecap="butt" />
-        </mask>
-        <linearGradient id={`${id}g`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#fff" stopOpacity="0" />
-          <stop offset="0.45" stopColor="#fff" stopOpacity="0.34" />
-          <stop offset="1" stopColor="#fff" stopOpacity="0.95" />
-        </linearGradient>
-        <linearGradient id={`${id}t`} x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0" stopColor="#fff" stopOpacity="1" />
-          <stop offset="0.6" stopColor="#fff" stopOpacity="0.55" />
-          <stop offset="1" stopColor="#fff" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      {/* dasar huruf */}
-      <path d={d} fill="none" stroke="#07090a" strokeWidth="15" strokeLinejoin="miter" strokeLinecap="butt" />
-      <g mask={`url(#${id}m)`}>
-        <rect className="fire-base" width="100" height="100" fill={`url(#${id}g)`} />
-        {tongues.map((t, k) => (
-          <g key={k} transform={`translate(${t.x.toFixed(1)} 104) scale(${t.w})`}>
-            <path
-              className="flame"
-              d="M-7 0 C-8 -12 -3 -22 0 -40 C3 -22 8 -12 7 0 Z"
-              fill={`url(#${id}t)`}
-              style={{ animationDuration: `${t.dur}s`, animationDelay: `${t.delay}s` }}
-            />
-          </g>
-        ))}
-      </g>
-    </svg>
+      {/* dasar huruf gelap + pendar putih (statis) */}
+      <svg viewBox="-10 -30 120 130" className="absolute inset-0 w-full h-full overflow-visible">
+        <defs>
+          <filter id={`fl${index}glow`} x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="3" />
+          </filter>
+        </defs>
+        <path d={d} fill="none" stroke="#fff" strokeWidth="17" opacity="0.5" filter={`url(#fl${index}glow)`} />
+        <path d={d} fill="none" stroke="#07090a" strokeWidth="15" strokeLinejoin="miter" opacity="0.8" />
+      </svg>
+
+      {/* kabut api yang menjilat keluar */}
+      <div className="absolute inset-0 overflow-hidden" style={{ ...maskStyle(halo), opacity: 0.75 }}>
+        <FlameScroll tileW={58.33} tileH={42.42} dur={durB * 1.5} delay={index * 0.6} offX={index * 13} />
+      </div>
+
+      {/* isi huruf */}
+      <div className="absolute inset-0 overflow-hidden" style={maskStyle(inner)}>
+        <div
+          className="fire-base absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(to bottom, rgba(255,255,255,0.14) 23%, rgba(255,255,255,0.5) 62%, rgba(255,255,255,1) 100%)",
+          }}
+        />
+        <FlameScroll tileW={83.33} tileH={60.61} dur={durA} offX={(index * 31) % 100} />
+        <FlameScroll tileW={58.33} tileH={42.42} dur={durB} delay={index * 0.37} offX={(index * 17 + 40) % 70} opacity={0.9} />
+        <FlameScroll tileW={83.33} tileH={60.61} dur={durA * 0.78} delay={index * 0.9} offX={(index * 47 + 55) % 100} opacity={0.75} />
+      </div>
+    </div>
   );
 }
 
@@ -102,17 +159,21 @@ function Tile({ index }: { index: number }) {
           repeat: Infinity,
           ease: "easeInOut",
         }}
-        className="relative w-full h-full rounded-[16px] overflow-hidden border border-white/10 bg-black shadow-[0_18px_40px_-12px_rgba(156,255,30,0.28)]"
+        className="relative w-full h-full"
         role="img"
         aria-label={l.char}
       >
-        <img
-          src={src}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover grayscale contrast-125 brightness-125 scale-125"
-          style={{ objectPosition: `${20 + index * 12}% ${30 + (index % 3) * 20}%` }}
-        />
-        <div className="absolute inset-0 bg-[#9CFF1E] mix-blend-multiply opacity-70" />
+        {/* foto (dipotong rounded) */}
+        <div className="absolute inset-0 rounded-[16px] overflow-hidden border border-white/10 bg-black shadow-[0_18px_40px_-12px_rgba(156,255,30,0.28)]">
+          <img
+            src={src}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover grayscale contrast-125 brightness-125 scale-125"
+            style={{ objectPosition: `${20 + index * 12}% ${30 + (index % 3) * 20}%` }}
+          />
+          <div className="absolute inset-0 bg-[#9CFF1E] mix-blend-multiply opacity-70" />
+        </div>
+        {/* api: di luar kotak foto supaya kabutnya bisa menjilat keluar */}
         <FlameLetter d={l.d} index={index} />
       </motion.div>
     </motion.div>
@@ -174,6 +235,24 @@ export function Hero() {
             <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </Link>
         </motion.div>
+      </div>
+
+      {/* keterangan: dibangun di atas NEAR */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-6 md:bottom-8 z-10 flex justify-center">
+        <motion.a
+          href="https://near.org"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Built on NEAR"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.9, delay: 1.3, ease: [0.22, 1, 0.36, 1] }}
+          className="pointer-events-auto group inline-flex items-center gap-3 rounded-full border border-white/12 bg-black/35 backdrop-blur-md pl-5 pr-5 py-2.5 text-[11px] uppercase tracking-[0.22em] text-white/55 transition-colors duration-300 hover:border-white/30 hover:text-white"
+        >
+          <span>Built on</span>
+          <NearLogo className="h-[18px] w-[18px] text-white" />
+          <span className="font-semibold tracking-[0.24em] text-white">NEAR</span>
+        </motion.a>
       </div>
     </section>
   );

@@ -60,12 +60,14 @@
   to { transform: rotate(360deg); }
 }
 
-@keyframes flame-rise {
-  0% { transform: translate(0, 0) scale(0.7, 0.5); opacity: 0; }
-  18% { opacity: 1; }
-  35% { transform: translate(2px, -30px) scale(1, 1.05); }
-  60% { transform: translate(-2px, -52px) scale(1, 1.15); opacity: 0.75; }
-  100% { transform: translate(1px, -96px) scale(0.55, 1.45); opacity: 0; }
+@keyframes flame-scroll {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, var(--flame-dist, -60%), 0); }
+}
+
+@keyframes fire-text {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: 0 -320px, 0 0; }
 }
 
 @keyframes fire-pulse {
@@ -216,15 +218,19 @@
 
   /* Landing: marquee pill */
   .animate-marquee { animation: marquee 40s linear infinite; }
-  .flame {
-    transform-box: fill-box;
-    transform-origin: 50% 100%;
-    animation: flame-rise 2s ease-out infinite;
+  .flame-scroll { animation: flame-scroll 3s linear infinite; }
+  .fire-text {
+    background-image: url(/flame-noise.png), linear-gradient(rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.72));
+    background-size: 160px 320px, 100% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: fire-text 3.2s linear infinite;
   }
   .fire-base { animation: fire-pulse 1.3s ease-in-out infinite; }
   @media (prefers-reduced-motion: reduce) {
-    .flame { animation: none; opacity: 0.45; }
-    .fire-base { animation: none; }
+    .flame-scroll, .fire-base, .fire-text { animation: none; }
   }
   .animate-spin-slow { animation: spin-slow 28s linear infinite; }
   .animate-marquee-reverse { animation: marquee 48s linear infinite reverse; }

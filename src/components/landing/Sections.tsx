@@ -6,25 +6,24 @@ import {
   motion,
   useScroll,
   useTransform,
+  useMotionValue,
+  useSpring,
+  useReducedMotion,
   type MotionValue,
 } from "framer-motion";
 import {
   ArrowUpRight,
   ArrowLeft,
   ArrowRight,
-  Check,
   Asterisk,
   Ticket,
-  ScanLine,
   Stamp,
   MessagesSquare,
   Vote,
-  Gift,
-  Sparkles,
-  MapPin,
-  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FlameScroll } from "./Hero";
+import { NearLogo } from "@/components/ui/NearLogo";
 import { useChainEvents } from "@/lib/chain/hooks";
 import { fmtShort } from "@/lib/chain/format";
 import { isEnded, lowestPrice } from "@/data/events";
@@ -198,62 +197,109 @@ export function About() {
 /* ------------------------------------------------------------------ */
 
 const services = [
-  { title: "Smart pass", desc: "Tiket digital di ponsel", icon: Ticket, accent: ScanLine, href: "/how-it-works" },
-  { title: "Lencana permanen", desc: "Tiket jadi lencana setelah acara", icon: Stamp, accent: Sparkles, href: "/how-it-works" },
-  { title: "Ruang komunitas", desc: "Obrolan eksklusif sesama pengunjung", icon: MessagesSquare, accent: Sparkles, href: "/how-it-works" },
-  { title: "Voting & reward", desc: "Pilih bintang tamu, dapat diskon merch", icon: Vote, accent: Gift, href: "/how-it-works" },
+  {
+    title: "Smart pass",
+    desc: "Tiket digital di ponsel. Scan sekali di pintu masuk, selesai.",
+    icon: Ticket,
+    href: "/how-it-works",
+  },
+  {
+    title: "Lencana permanen",
+    desc: "Tiket jadi lencana setelah acara, tersimpan selamanya di paspormu.",
+    icon: Stamp,
+    href: "/how-it-works",
+  },
+  {
+    title: "Ruang komunitas",
+    desc: "Obrolan eksklusif sesama pengunjung yang benar-benar hadir.",
+    icon: MessagesSquare,
+    href: "/how-it-works",
+  },
+  {
+    title: "Voting & reward",
+    desc: "Pilih bintang tamu, dapat diskon merch.",
+    icon: Vote,
+    href: "/how-it-works",
+  },
 ];
-
-function Illustration({ Main, Accent }: { Main: React.ElementType; Accent: React.ElementType }) {
-  return (
-    <div className="relative w-[120px] h-[110px] md:w-[170px] md:h-[130px] shrink-0">
-      <div className="absolute inset-x-3 inset-y-2 rounded-[28px] bg-white border-[3px] border-[#141414] rotate-[-4deg]" />
-      <div className="absolute inset-0 flex items-center justify-center">
-        <Main className="w-14 h-14 md:w-20 md:h-20 text-[#141414]" strokeWidth={1.6} />
-      </div>
-      <Accent className="absolute -top-1 -right-1 w-7 h-7 text-[#141414]" strokeWidth={1.8} />
-      <Sparkles className="absolute bottom-0 -left-2 w-5 h-5 text-[#141414]" strokeWidth={1.8} />
-    </div>
-  );
-}
 
 export function Services() {
   return (
-    <section id="services" data-nav-theme="light" className="relative bg-white text-[#141414] py-24 md:py-32 overflow-hidden">
-      <div className="absolute inset-0 lime-grid [mask-image:linear-gradient(180deg,#000,transparent_85%)] pointer-events-none" />
-      <div className="relative px-6 md:px-12 max-w-[1280px] mx-auto space-y-12">
-        <div className="space-y-4 max-w-xl">
-          <h2 className="text-[40px] md:text-[56px] font-extrabold tracking-[-0.04em] leading-none">Fitur</h2>
-          <p className="text-[17px] text-[#141414]/60 leading-relaxed">
-            Semua yang komunitasmu butuhkan supaya pengunjung tetap dekat, dari pintu masuk sampai setelah acara bubar.
+    <section
+      id="services"
+      data-nav-theme="light"
+      className="relative bg-[#FBFCF7] text-[#141414] py-28 md:py-40 overflow-hidden"
+    >
+      {/* cahaya lime sangat tipis */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-1/3 -left-1/4 w-[60vw] h-[60vw] rounded-full bg-[#9CFF1E]/[0.14] blur-[140px]"
+      />
+
+      <div className="relative px-6 md:px-12 max-w-[1280px] mx-auto">
+        {/* label + garis tipis */}
+        <div className="flex items-center gap-5 mb-14 md:mb-20">
+          <span className="text-[12px] tracking-[0.22em] uppercase text-[#141414]/55">(02) Fitur</span>
+          <span className="h-px flex-1 bg-[#141414]/12" />
+        </div>
+
+        {/* judul + pengantar */}
+        <div className="grid md:grid-cols-12 gap-8 md:gap-10 items-end mb-16 md:mb-24">
+          <h2 className="md:col-span-8 text-[38px] sm:text-[48px] md:text-[68px] font-light leading-[1.06] tracking-[-0.035em]">
+            Semua yang komunitasmu{" "}
+            <span className="font-[family-name:var(--font-logo)] italic font-normal text-[#3F7D00] tracking-[-0.01em]">
+              butuhkan
+            </span>
+            .
+          </h2>
+          <p className="md:col-span-4 text-[15.5px] leading-relaxed text-[#141414]/55 max-w-[38ch]">
+            Supaya pengunjung tetap dekat, dari pintu masuk sampai setelah acara bubar.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4 md:gap-5">
-          {services.map((s) => (
-            <Link
-              key={s.title}
-              href={s.href}
-              className="group relative rounded-[28px] p-7 md:p-9 flex items-center justify-between gap-6 min-h-[170px] md:min-h-[190px] transition-transform duration-500 hover:-translate-y-1"
-              style={{ background: LIME }}
-            >
-              <div className="space-y-2 max-w-[11rem]">
-                <h3 className="text-[22px] md:text-[26px] font-semibold leading-tight tracking-[-0.02em]">{s.title}</h3>
-                <p className="text-[14px] text-[#141414]/70 leading-snug">{s.desc}</p>
-              </div>
-              <Illustration Main={s.icon} Accent={s.accent} />
-              <ArrowUpRight className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </Link>
-          ))}
+        {/* daftar fitur */}
+        <div className="border-b border-[#141414]/12">
+          {services.map((sv, i) => {
+            const Icon = sv.icon;
+            return (
+              <motion.div
+                key={sv.title}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={{ duration: 0.8, delay: 0.06 * i, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <Link
+                  href={sv.href}
+                  className="group grid md:grid-cols-12 items-center gap-y-4 gap-x-6 py-8 md:py-11 -mx-4 px-4 md:-mx-8 md:px-8 border-t border-[#141414]/12 transition-colors duration-500 hover:bg-[#9CFF1E]/[0.16]"
+                >
+                  <span className="md:col-span-1 text-[12px] tracking-[0.2em] text-[#3F7D00]">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <h3 className="md:col-span-5 font-[family-name:var(--font-logo)] italic text-[38px] md:text-[52px] leading-[1.02] tracking-[-0.015em] transition-transform duration-500 group-hover:translate-x-2">
+                    {sv.title}
+                  </h3>
+                  <p className="md:col-span-4 text-[15px] leading-relaxed text-[#141414]/55 max-w-[36ch]">{sv.desc}</p>
+                  <div className="md:col-span-2 flex md:justify-end">
+                    <span className="relative inline-flex items-center justify-center w-14 h-14 rounded-full border border-[#141414]/18 transition-all duration-500 group-hover:bg-[#141414] group-hover:border-[#141414] group-hover:text-[#9CFF1E] group-hover:rotate-[-8deg]">
+                      <Icon className="w-6 h-6" strokeWidth={1.25} />
+                    </span>
+                  </div>
+                </Link>
+              </motion.div>
+            );
+          })}
         </div>
 
-        <div>
+        <div className="mt-14 md:mt-16">
           <Link
             href="#contact"
-            className="inline-flex items-center gap-4 px-7 py-3.5 rounded-full border text-[14px] font-medium uppercase tracking-wide hover:bg-[#9CFF1E] transition-colors"
-            style={{ borderColor: LIME }}
+            className="group inline-flex items-center gap-4 pl-7 pr-5 py-3.5 rounded-full border border-[#141414]/20 text-[13px] font-medium uppercase tracking-[0.14em] transition-colors duration-300 hover:bg-[#141414] hover:text-white hover:border-[#141414]"
           >
-            Ayo ngobrol <ArrowUpRight className="w-4 h-4" />
+            Ayo ngobrol
+            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#9CFF1E] text-[#141414]">
+              <ArrowUpRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </span>
           </Link>
         </div>
       </div>
@@ -273,82 +319,136 @@ export function Events() {
   const scrollBy = (dir: 1 | -1) => {
     scroller.current?.scrollBy({ left: dir * 340, behavior: "smooth" });
   };
+  const arrowBtn =
+    "w-12 h-12 rounded-full border border-white/20 flex items-center justify-center text-white transition-colors duration-300 hover:bg-[#9CFF1E] hover:border-[#9CFF1E] hover:text-[#141414]";
 
   return (
-    <section id="events" data-nav-theme="light" className="relative bg-white text-[#141414] py-24 md:py-32 overflow-hidden">
-      <div className="px-6 md:px-12 max-w-[1280px] mx-auto space-y-12">
-        <div className="space-y-4 max-w-xl">
-          <h2 className="text-[40px] md:text-[56px] font-extrabold tracking-[-0.04em] leading-none">Event terbaru</h2>
-          <p className="text-[17px] text-[#141414]/60 leading-relaxed">
-            Gigs, pameran, dan festival dari akar rumput. Setiap event menambah stempel di paspormu.
-          </p>
+    <section
+      id="events"
+      data-nav-theme="dark"
+      className="relative bg-[#050606] text-white py-28 md:py-40 overflow-hidden"
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-1/3 -right-1/4 w-[60vw] h-[60vw] rounded-full bg-[#9CFF1E]/[0.06] blur-[140px]"
+      />
+
+      <div className="relative px-6 md:px-12 max-w-[1280px] mx-auto">
+        {/* label + garis tipis */}
+        <div className="flex items-center gap-5 mb-14 md:mb-20">
+          <span className="text-[12px] tracking-[0.22em] uppercase text-white/55">(03) Event</span>
+          <span className="h-px flex-1 bg-white/12" />
+        </div>
+
+        {/* judul + pengantar + panah */}
+        <div className="grid md:grid-cols-12 gap-8 md:gap-10 items-end mb-14 md:mb-20">
+          <h2 className="md:col-span-8 text-[38px] sm:text-[48px] md:text-[68px] font-light leading-[1.06] tracking-[-0.035em]">
+            Event{" "}
+            <span className="font-[family-name:var(--font-logo)] italic font-normal text-[#9CFF1E] tracking-[-0.01em]">
+              terbaru
+            </span>
+            .
+          </h2>
+          <div className="md:col-span-4 space-y-6">
+            <p className="text-[15.5px] leading-relaxed text-white/55 max-w-[38ch]">
+              Gigs, pameran, dan festival dari akar rumput. Setiap event menambah stempel di paspormu.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => scrollBy(-1)} aria-label="Sebelumnya" className={arrowBtn}>
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <button onClick={() => scrollBy(1)} aria-label="Berikutnya" className={arrowBtn}>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
 
         <div
           ref={scroller}
-          className="flex gap-5 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-6 px-6 md:mx-0 md:px-0 pb-2"
+          className="flex gap-6 md:gap-8 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-6 px-6 md:mx-0 md:px-0 pb-2"
         >
           {isLoading &&
             Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="shrink-0 w-[260px] md:w-[300px] h-[400px] md:h-[440px] rounded-[24px] bg-[#F5F8EE] animate-pulse" />
+              <div key={i} className="shrink-0 w-[260px] md:w-[300px] space-y-5">
+                <div className="aspect-[4/5] rounded-[14px] bg-white/[0.06] animate-pulse" />
+                <div className="h-4 w-2/3 rounded bg-white/[0.06] animate-pulse" />
+                <div className="h-7 w-full rounded bg-white/[0.06] animate-pulse" />
+              </div>
             ))}
 
           {!isLoading && events.length === 0 && (
-            <div className="w-full py-16 text-center text-[#141414]/60 space-y-3">
+            <div className="w-full py-16 text-center text-white/60 space-y-3">
               <p>{error ? "Event belum bisa dimuat dari jaringan NEAR." : "Belum ada event di kontrak."}</p>
               {!error && (
-                <Link href="/organizer/create-event" className="inline-block font-semibold text-[#3F7D00] underline underline-offset-4">
+                <Link href="/organizer/create-event" className="inline-block font-semibold text-[#9CFF1E] underline underline-offset-4">
                   Jadi yang pertama membuat event
                 </Link>
               )}
             </div>
           )}
 
-          {events.map((e) => (
-            <Link
-              key={e.id}
-              href={`/events/${e.id}`}
-              className="group relative snap-start shrink-0 w-[260px] md:w-[300px] h-[400px] md:h-[440px] rounded-[24px] overflow-hidden bg-[#141414]"
-            >
-              {e.image && <img src={e.image} alt={e.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-              <span
-                className="absolute top-4 left-4 px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wide text-[#141414]"
-                style={{ background: LIME }}
+          {events.map((e, i) => {
+            const ended = isEnded(e);
+            return (
+              <Link
+                key={e.id}
+                href={`/events/${e.id}`}
+                className="group snap-start shrink-0 w-[260px] md:w-[300px]"
               >
-                {e.category.charAt(0) + e.category.slice(1).toLowerCase()}
-              </span>
-              <div className="absolute bottom-0 inset-x-0 p-5 space-y-3 text-white">
-                <p className="text-[12px] uppercase tracking-wide text-white/60">{e.organizer}</p>
-                <h3 className="text-[22px] font-semibold leading-tight tracking-[-0.02em]">{e.title}</h3>
-                <div className="flex items-center justify-between text-[12px] text-white/70">
-                  <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {e.city}</span>
-                  <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {e.dateLabel}</span>
+                <div className="relative aspect-[4/5] overflow-hidden rounded-[14px] bg-white/[0.06]">
+                  {e.image && (
+                    <img
+                      src={e.image}
+                      alt={e.title}
+                      className={cn(
+                        "absolute inset-0 w-full h-full object-cover transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0",
+                        ended ? "grayscale opacity-60" : "grayscale-[35%]"
+                      )}
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/25" />
+                  <span className="absolute top-4 left-4 text-[11px] tracking-[0.22em] text-white/85">
+                    NO. {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span className="absolute top-3.5 right-4 px-3 py-1 rounded-full border border-white/30 backdrop-blur-sm text-[10px] uppercase tracking-[0.16em] text-white/90">
+                    {e.category.charAt(0) + e.category.slice(1).toLowerCase()}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between pt-3 border-t border-white/15">
-                  <span className="text-[12px] text-white/60">{isEnded(e) ? "Event selesai" : "Mulai dari"}</span>
-                  <span className="text-[17px] font-semibold" style={{ color: LIME }}>{fmtShort(lowestPrice(e))}</span>
+
+                <div className="pt-5 space-y-3">
+                  <p className="text-[11px] tracking-[0.2em] uppercase text-white/45 truncate">
+                    {e.organizer} · {e.city}
+                  </p>
+                  <h3 className="font-[family-name:var(--font-logo)] italic text-[26px] md:text-[29px] leading-[1.08] tracking-[-0.01em] line-clamp-2 transition-colors duration-300 group-hover:text-[#9CFF1E]">
+                    {e.title}
+                  </h3>
+                  <div className="flex items-center justify-between pt-3 border-t border-white/12 text-[13px]">
+                    <span className="text-white/55">{e.dateLabel}</span>
+                    {ended ? (
+                      <span className="text-white/40">Selesai</span>
+                    ) : (
+                      <span className="text-white/55">
+                        Mulai <span className="text-[#9CFF1E] font-medium">{fmtShort(lowestPrice(e))}</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
 
-        <div className="flex justify-between">
-          <button
-            onClick={() => scrollBy(-1)}
-            aria-label="Sebelumnya"
-            className="w-11 h-11 rounded-full border border-[#141414]/15 flex items-center justify-center hover:bg-[#9CFF1E] hover:border-[#9CFF1E] transition-colors"
+        <div className="mt-14 md:mt-16">
+          <Link
+            href="/events"
+            className="group inline-flex items-center gap-4 pl-7 pr-5 py-3.5 rounded-full border border-white/20 text-[13px] font-medium uppercase tracking-[0.14em] transition-colors duration-300 hover:bg-white hover:text-[#141414] hover:border-white"
           >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => scrollBy(1)}
-            aria-label="Berikutnya"
-            className="w-11 h-11 rounded-full border border-[#141414]/15 flex items-center justify-center hover:bg-[#9CFF1E] hover:border-[#9CFF1E] transition-colors"
-          >
-            <ArrowRight className="w-4 h-4" />
-          </button>
+            Lihat semua event
+            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#9CFF1E] text-[#141414]">
+              <ArrowUpRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </span>
+          </Link>
         </div>
       </div>
     </section>
@@ -365,73 +465,243 @@ const passportPoints = [
   "Perk terbuka tanpa perlu menunjukkan KTP",
 ];
 
-function PassportCard() {
-  const stamps = [
-    { label: "Gigs Basement", date: "12.10", rot: "-8deg" },
-    { label: "Zine Fair", date: "03.11", rot: "6deg" },
-    { label: "Open Mic", date: "21.11", rot: "-3deg" },
-  ];
+const passportStamps = [
+  { label: "Gigs Basement", date: "12.10", rot: -8 },
+  { label: "Zine Fair", date: "03.11", rot: 5 },
+  { label: "Open Mic", date: "21.11", rot: -3 },
+];
+
+/** Satu cap: masuk dengan efek "ditekan", lalu ditekan ulang berkala dengan riak tinta */
+function StampMark({
+  label,
+  date,
+  rot,
+  i,
+  reduce,
+}: {
+  label: string;
+  date: string;
+  rot: number;
+  i: number;
+  reduce: boolean | null;
+}) {
+  const loopDelay = 3.2 + i * 0.55;
   return (
-    <div className="relative w-full max-w-sm mx-auto">
-      <div className="absolute inset-0 translate-x-3 translate-y-3 rounded-[32px]" style={{ background: LIME }} />
-      <div className="relative rounded-[32px] bg-[#0b0d0a] text-white p-7 md:p-8 space-y-7 shadow-2xl">
-        <div className="flex items-center justify-between">
-          <span className="font-[family-name:var(--font-logo)] text-xl font-black italic uppercase tracking-tighter" style={{ color: LIME }}>Karcis</span>
-          <span className="text-[11px] uppercase tracking-[0.3em] text-white/50">Paspor</span>
+    <motion.div
+      initial={{ opacity: 0, scale: 1.5, rotate: rot + 14 }}
+      whileInView={{ opacity: 1, scale: 1, rotate: rot }}
+      viewport={{ once: true, margin: "-40px" }}
+      transition={{ duration: 0.55, delay: 0.5 + i * 0.22, ease: [0.34, 1.56, 0.64, 1] }}
+      className="relative aspect-square"
+    >
+      <motion.div
+        animate={reduce ? undefined : { scale: [1, 1.12, 0.96, 1], rotate: [0, -3, 1.5, 0] }}
+        transition={{ duration: 0.75, delay: loopDelay, repeat: Infinity, repeatDelay: 5.5, ease: "easeOut" }}
+        className="absolute inset-0 rounded-full border border-[#9CFF1E] text-[#9CFF1E] flex flex-col items-center justify-center text-center px-3"
+      >
+        <span className="absolute inset-[5px] rounded-full border border-dashed border-[#9CFF1E]/45" />
+        <span className="relative text-[9px] font-semibold uppercase leading-tight tracking-[0.14em]">{label}</span>
+        <span className="relative mt-1.5 text-[10px] font-mono tracking-wider text-[#9CFF1E]/80">{date}</span>
+      </motion.div>
+      {!reduce && (
+        <motion.span
+          aria-hidden
+          initial={{ opacity: 0 }}
+          animate={{ scale: [1, 1.5], opacity: [0.75, 0] }}
+          transition={{ duration: 1.1, delay: loopDelay, repeat: Infinity, repeatDelay: 5.15, ease: "easeOut" }}
+          className="pointer-events-none absolute inset-0 rounded-full border border-[#9CFF1E]"
+        />
+      )}
+    </motion.div>
+  );
+}
+
+function PassportCard() {
+  const reduce = useReducedMotion();
+  // kemiringan 3D mengikuti kursor (per sumbu dihaluskan dengan spring)
+  const mx = useMotionValue(0);
+  const my = useMotionValue(0);
+  const sx = useSpring(mx, { stiffness: 120, damping: 14, mass: 0.6 });
+  const sy = useSpring(my, { stiffness: 120, damping: 14, mass: 0.6 });
+  const rotateY = useTransform(sx, [-0.5, 0.5], [10, -10]);
+  const rotateX = useTransform(sy, [-0.5, 0.5], [-8, 8]);
+  const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    mx.set((e.clientX - r.left) / r.width - 0.5);
+    my.set((e.clientY - r.top) / r.height - 0.5);
+  };
+  const onLeave = () => {
+    mx.set(0);
+    my.set(0);
+  };
+
+  return (
+    <div
+      className="relative w-full max-w-[420px] mx-auto lg:ml-auto"
+      style={{ perspective: 1100 }}
+      onPointerMove={reduce ? undefined : onMove}
+      onPointerLeave={onLeave}
+    >
+      {/* pendar lime di belakang kartu, bernapas pelan */}
+      <motion.div
+        aria-hidden
+        className="absolute -inset-10 rounded-full bg-[#9CFF1E]/25 blur-[70px]"
+        animate={reduce ? undefined : { opacity: [0.65, 1, 0.65], scale: [1, 1.07, 1] }}
+        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+      />
+
+      {/* melayang pelan */}
+      <motion.div
+        className="relative"
+        animate={reduce ? undefined : { y: [0, -14, 0], rotate: [-1.5, 0.6, -1.5] }}
+        transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+      >
+        {/* api di BELAKANG kartu: helai api lime naik dan menjilat keluar dari tepi atas & samping */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute overflow-hidden"
+          style={{
+            left: "-13%",
+            right: "-13%",
+            top: "-38%",
+            bottom: "-2%",
+            maskImage:
+              "linear-gradient(to top, #000 45%, transparent 100%), linear-gradient(to right, transparent, #000 20%, #000 80%, transparent)",
+            WebkitMaskImage:
+              "linear-gradient(to top, #000 45%, transparent 100%), linear-gradient(to right, transparent, #000 20%, #000 80%, transparent)",
+            maskComposite: "intersect",
+            WebkitMaskComposite: "source-in",
+          }}
+        >
+          <FlameScroll src="/flame-lime.png" tileW={83.33} tileH={60.61} dur={5.2} offX={20} opacity={0.95} />
+          <FlameScroll src="/flame-lime.png" tileW={58.33} tileH={42.42} dur={3.3} delay={1.4} offX={45} opacity={0.8} />
         </div>
-        <div className="space-y-1">
-          <p className="text-[11px] uppercase tracking-widest text-white/40">Pemegang</p>
-          <p className="text-2xl font-semibold tracking-tight">budi.testnet</p>
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          {stamps.map((s) => (
-            <div
-              key={s.label}
-              className="aspect-square rounded-full border-2 text-center p-2 flex flex-col items-center justify-center bg-white/5"
-              style={{ transform: `rotate(${s.rot})`, borderColor: LIME, color: LIME }}
-            >
-              <span className="text-[9px] font-bold uppercase leading-tight">{s.label}</span>
-              <span className="text-[10px] font-mono mt-1">{s.date}</span>
+
+        <motion.div
+          style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
+          className="relative z-10 overflow-hidden rounded-[26px] bg-[#0a0c09] text-white p-2 shadow-[0_40px_80px_-30px_rgba(20,20,20,0.55)]"
+        >
+          {/* bingkai tipis di dalam kartu */}
+          <div className="rounded-[20px] border border-white/10 p-7 md:p-8 space-y-8">
+            <div className="flex items-start justify-between">
+              <span className="font-[family-name:var(--font-logo)] italic text-[30px] leading-none text-[#9CFF1E]">Karcis</span>
+              <span className="text-[10px] tracking-[0.3em] uppercase text-white/45 pt-1.5">Paspor komunitas</span>
             </div>
-          ))}
-        </div>
-        <div className="space-y-2">
-          <div className="flex justify-between text-[11px] uppercase tracking-widest text-white/60">
-            <span>Level: Langganan</span>
-            <span>3 / 5 stempel</span>
+
+            <div className="space-y-2">
+              <p className="text-[10px] uppercase tracking-[0.28em] text-white/40">Pemegang</p>
+              <p className="font-[family-name:var(--font-logo)] italic text-[34px] leading-[1.15] tracking-[-0.01em]">budi.testnet</p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3.5">
+              {passportStamps.map((st, i) => (
+                <StampMark key={st.label} {...st} i={i} reduce={reduce} />
+              ))}
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex justify-between text-[10px] uppercase tracking-[0.2em] text-white/55">
+                <span>Level · Langganan</span>
+                <span>3 / 5 stempel</span>
+              </div>
+              <div className="grid grid-cols-5 gap-1.5">
+                {[0, 1, 2, 3, 4].map((n) => (
+                  <motion.span
+                    key={n}
+                    initial={{ scaleX: 0 }}
+                    whileInView={{ scaleX: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: 0.3 + n * 0.12, ease: "easeOut" }}
+                    style={{ originX: 0 }}
+                    className={cn("relative h-[3px] rounded-full", n < 3 ? "bg-[#9CFF1E]" : "bg-white/15")}
+                  >
+                    {/* segmen berikutnya berkedip: "tinggal selangkah lagi" */}
+                    {n === 3 && !reduce && (
+                      <motion.span
+                        aria-hidden
+                        className="absolute inset-0 rounded-full bg-[#9CFF1E]"
+                        animate={{ opacity: [0, 0.9, 0] }}
+                        transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+                      />
+                    )}
+                  </motion.span>
+                ))}
+              </div>
+              <p className="text-[12.5px] leading-relaxed text-white/50">2 stempel lagi untuk akses ruang diskusi kreator.</p>
+            </div>
+
+            {/* baris ala paspor: hiasan */}
+            <p aria-hidden className="font-mono text-[10px] leading-[1.5] tracking-[0.18em] text-white/20 break-all select-none">
+              {"P<KRC<<BUDI<TESTNET<<<<<<<<<<<"}
+              <br />
+              {"0003<<STEMPEL<<LANGGANAN<<<<<<"}
+            </p>
           </div>
-          <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-            <div className="h-full w-3/5 rounded-full" style={{ background: LIME }} />
-          </div>
-          <p className="text-[12px] text-white/50">2 stempel lagi untuk akses ruang diskusi kreator.</p>
-        </div>
-      </div>
+
+          {!reduce && (
+            <>
+              {/* kilau yang menyapu kartu */}
+              <motion.div
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0 left-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/[0.13] to-transparent"
+                initial={{ x: "-160%" }}
+                animate={{ x: ["-160%", "420%"] }}
+                transition={{ duration: 1.9, delay: 2, repeat: Infinity, repeatDelay: 5.5, ease: "easeInOut" }}
+              />
+              {/* garis scan lime, seperti dipindai di pintu masuk */}
+              <motion.div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-5 h-px bg-[#9CFF1E] shadow-[0_0_14px_3px_rgba(156,255,30,0.5)]"
+                initial={{ top: "3%", opacity: 0 }}
+                animate={{ top: ["3%", "97%"], opacity: [0, 1, 1, 0] }}
+                transition={{ duration: 2.6, delay: 4.5, repeat: Infinity, repeatDelay: 5.5, ease: "linear" }}
+              />
+            </>
+          )}
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
 
 export function Passport() {
   return (
-    <section data-nav-theme="light" className="relative bg-[#F7FFE9] text-[#141414] py-24 md:py-32 border-y border-[#141414]/5 overflow-hidden">
-      <div className="absolute inset-0 lime-grid opacity-60 [mask-image:radial-gradient(ellipse_at_center,#000,transparent_75%)] pointer-events-none" />
-      <div className="relative px-6 md:px-12 max-w-[1280px] mx-auto grid lg:grid-cols-2 gap-16 items-center">
-        <div className="space-y-8">
-          <h2 className="text-[40px] md:text-[56px] font-extrabold tracking-[-0.04em] leading-[1.02]">
-            Paspor stempel<br />di dompetmu.
-          </h2>
-          <p className="text-[17px] text-[#141414]/60 leading-relaxed max-w-md">
-            Setiap acara yang kamu datangi tercatat sebagai stempel. Semakin banyak, semakin dekat kamu dengan komunitas.
-          </p>
-          <ul className="space-y-4">
-            {passportPoints.map((p) => (
-              <li key={p} className="flex items-center gap-3 text-[16px]">
-                <Check className="w-5 h-5" style={{ color: "#5fb800" }} strokeWidth={2.5} />
-                {p}
-              </li>
-            ))}
-          </ul>
+    <section
+      data-nav-theme="light"
+      className="relative bg-[#F5F9EA] text-[#141414] py-28 md:py-40 overflow-hidden"
+    >
+      <div className="relative px-6 md:px-12 max-w-[1280px] mx-auto">
+        {/* label + garis tipis */}
+        <div className="flex items-center gap-5 mb-14 md:mb-20">
+          <span className="text-[12px] tracking-[0.22em] uppercase text-[#141414]/55">(04) Paspor</span>
+          <span className="h-px flex-1 bg-[#141414]/12" />
         </div>
-        <PassportCard />
+
+        <div className="grid lg:grid-cols-12 gap-16 lg:gap-10 items-center">
+          <div className="lg:col-span-7 space-y-10">
+            <h2 className="text-[38px] sm:text-[48px] md:text-[68px] font-light leading-[1.06] tracking-[-0.035em]">
+              Paspor stempel{" "}
+              <span className="font-[family-name:var(--font-logo)] italic font-normal text-[#3F7D00] tracking-[-0.01em]">
+                di dompetmu
+              </span>
+              .
+            </h2>
+            <p className="text-[16px] text-[#141414]/55 leading-relaxed max-w-[44ch]">
+              Setiap acara yang kamu datangi tercatat sebagai stempel. Semakin banyak, semakin dekat kamu dengan komunitas.
+            </p>
+            <ol className="max-w-lg border-b border-[#141414]/12">
+              {passportPoints.map((pt, i) => (
+                <li key={pt} className="flex items-baseline gap-6 py-5 border-t border-[#141414]/12">
+                  <span className="w-6 shrink-0 text-[12px] tracking-[0.2em] text-[#3F7D00]">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="text-[16px] leading-snug">{pt}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+          <div className="lg:col-span-5">
+            <PassportCard />
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -445,52 +715,76 @@ export function Contact() {
   const [sent, setSent] = useState(false);
 
   const field =
-    "w-full rounded-2xl border border-[#141414]/15 bg-white px-5 py-3.5 text-[15px] outline-none focus:border-[#9CFF1E] focus:ring-2 focus:ring-[#9CFF1E]/40 transition";
+    "w-full bg-transparent border-0 border-b border-white/25 px-0 py-3 text-[17px] normal-case tracking-normal text-white placeholder:text-white/30 outline-none focus:border-[#9CFF1E] transition-colors";
+  const labelCls = "block space-y-1 text-[11px] uppercase tracking-[0.22em] text-white/50";
 
   return (
-    <section id="contact" data-nav-theme="light" className="relative bg-white text-[#141414] py-24 md:py-32 overflow-hidden">
-      <div className="absolute inset-0 lime-grid [mask-image:linear-gradient(0deg,#000,transparent_80%)] pointer-events-none" />
-      <div className="relative px-6 md:px-12 max-w-[1280px] mx-auto grid lg:grid-cols-[.85fr_1.15fr] gap-12">
-        <div className="space-y-4">
-          <h2 className="text-[40px] md:text-[56px] font-extrabold tracking-[-0.04em] leading-none">Ayo ngobrol.</h2>
-          <p className="text-[17px] text-[#141414]/60 leading-relaxed max-w-sm">
-            Penyelenggara gigs, pameran, atau festival? Ceritakan komunitasmu dan kami bantu pasang pass-nya.
-          </p>
+    <section
+      id="contact"
+      data-nav-theme="dark"
+      className="relative bg-[#050606] text-white py-28 md:py-40 overflow-hidden"
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-1/2 left-1/4 w-[60vw] h-[60vw] rounded-full bg-[#9CFF1E]/[0.06] blur-[140px]"
+      />
+      <div className="relative px-6 md:px-12 max-w-[1280px] mx-auto">
+        {/* label + garis tipis */}
+        <div className="flex items-center gap-5 mb-14 md:mb-20">
+          <span className="text-[12px] tracking-[0.22em] uppercase text-white/55">(05) Kontak</span>
+          <span className="h-px flex-1 bg-white/12" />
         </div>
 
-        <form
-          className="grid gap-5"
-          onSubmit={(e) => {
-            e.preventDefault();
-            // Demo: belum ada backend, jadi form hanya menampilkan konfirmasi
-            setSent(true);
-          }}
-        >
-          <div className="grid sm:grid-cols-2 gap-5">
-            <label className="space-y-2 text-[13px] font-semibold">
-              Nama
-              <input required name="name" placeholder="Nama kamu" className={cn(field, "font-normal")} />
-            </label>
-            <label className="space-y-2 text-[13px] font-semibold">
-              Email
-              <input required type="email" name="email" placeholder="kamu@komunitas.com" className={cn(field, "font-normal")} />
-            </label>
+        <div className="grid lg:grid-cols-12 gap-14 lg:gap-10">
+          <div className="lg:col-span-5 space-y-8">
+            <h2 className="text-[38px] sm:text-[48px] md:text-[68px] font-light leading-[1.06] tracking-[-0.035em]">
+              Ayo{" "}
+              <span className="font-[family-name:var(--font-logo)] italic font-normal text-[#9CFF1E] tracking-[-0.01em]">
+                ngobrol
+              </span>
+              .
+            </h2>
+            <p className="text-[15.5px] leading-relaxed text-white/55 max-w-[38ch]">
+              Penyelenggara gigs, pameran, atau festival? Ceritakan komunitasmu dan kami bantu pasang pass-nya.
+            </p>
           </div>
-          <label className="space-y-2 text-[13px] font-semibold">
-            Pesan
-            <textarea required name="message" rows={4} placeholder="Ceritakan event atau komunitasmu" className={cn(field, "font-normal resize-none")} />
-          </label>
-          <div className="flex items-center gap-4">
-            <button
-              type="submit"
-              className="inline-flex items-center gap-4 px-8 py-3.5 rounded-full text-[15px] font-semibold text-[#141414] hover:shadow-[0_0_40px_rgba(156,255,30,0.6)] transition-shadow"
-              style={{ background: "linear-gradient(180deg, #C6FF6B 0%, #9CFF1E 100%)" }}
-            >
-              Kirim <ArrowUpRight className="w-4 h-4" />
-            </button>
-            {sent && <span className="text-[14px] text-[#141414]/60">Terima kasih! (demo: pesan belum dikirim ke mana pun)</span>}
-          </div>
-        </form>
+
+          <form
+            className="lg:col-span-7 lg:pl-10 grid gap-9"
+            onSubmit={(e) => {
+              e.preventDefault();
+              // Demo: belum ada backend, jadi form hanya menampilkan konfirmasi
+              setSent(true);
+            }}
+          >
+            <div className="grid sm:grid-cols-2 gap-9">
+              <label className={labelCls}>
+                Nama
+                <input required name="name" placeholder="Nama kamu" className={field} />
+              </label>
+              <label className={labelCls}>
+                Email
+                <input required type="email" name="email" placeholder="kamu@komunitas.com" className={field} />
+              </label>
+            </div>
+            <label className={labelCls}>
+              Pesan
+              <textarea required name="message" rows={3} placeholder="Ceritakan event atau komunitasmu" className={cn(field, "resize-none")} />
+            </label>
+            <div className="flex flex-wrap items-center gap-5">
+              <button
+                type="submit"
+                className="group inline-flex items-center gap-4 pl-8 pr-3 py-3 rounded-full bg-[#9CFF1E] text-[#141414] text-[13px] font-semibold uppercase tracking-[0.14em] transition-shadow hover:shadow-[0_0_40px_rgba(156,255,30,0.45)]"
+              >
+                Kirim
+                <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-[#141414] text-[#9CFF1E]">
+                  <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </span>
+              </button>
+              {sent && <span className="text-[14px] text-white/55">Terima kasih! (demo: pesan belum dikirim ke mana pun)</span>}
+            </div>
+          </form>
+        </div>
       </div>
     </section>
   );
@@ -513,6 +807,7 @@ export function LandingFooter() {
         <div className="grid grid-cols-2 gap-12 text-[14px]">
           <nav className="flex flex-col gap-3 text-white/70">
             <Link href="/events" className="hover:text-white">Semua event</Link>
+            <Link href="/resale" className="hover:text-white">Pasar tiket</Link>
             <Link href="/how-it-works" className="hover:text-white">Cara kerja</Link>
             <Link href="/help" className="hover:text-white">Bantuan</Link>
           </nav>
@@ -525,7 +820,10 @@ export function LandingFooter() {
       </div>
       <div className="max-w-[1280px] mx-auto mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row justify-between gap-2 text-[12px] text-white/40">
         <span>© 2026 Karcis. Dibuat untuk komunitas.</span>
-        <span>Dibangun di NEAR Protocol (testnet)</span>
+        <span className="inline-flex items-center gap-2">
+          <NearLogo className="h-4 w-4 text-white/70" />
+          Dibangun di NEAR Protocol (testnet)
+        </span>
       </div>
     </footer>
   );

@@ -7,6 +7,14 @@ import { cn } from "@/lib/utils";
 import { useNearWallet } from "@/providers/NearWalletProvider";
 import { useAuthStore, type OrganizerType } from "@/store/useAuthStore";
 import { useHydrated } from "@/lib/useHydrated";
+import { useOrganizer } from "@/lib/chain/hooks";
+import { registerOrganizerTx } from "@/lib/chain/builders";
+import { explainChainError } from "@/lib/chain/errors";
+
+const DRAFT_KEY = "karcis-org-draft";
+
+const asOrgType = (v: string): OrganizerType =>
+  (["komunitas", "kampus", "individu", "agensi"] as const).find((t) => t === v) ?? "komunitas";
 
 const orgTypes: { id: OrganizerType; label: string }[] = [
   { id: "komunitas", label: "Komunitas / kolektif" },
@@ -30,7 +38,8 @@ function Onboarding() {
   const router = useRouter();
   const search = useSearchParams();
   const hydrated = useHydrated();
-  const { accountId, isReady, signIn } = useNearWallet();
+  const { accountId, isReady, signIn, sendTransactions } = useNearWallet();
+  const onchain = useOrganizer(accountId);
   const profiles = useAuthStore((s) => s.profiles);
   const saveProfile = useAuthStore((s) => s.saveProfile);
   const addOrganizerRole = useAuthStore((s) => s.addOrganizerRole);
@@ -40,7 +49,41 @@ function Onboarding() {
 
   const [role, setRole] = useState<"buyer" | "organizer" | null>(wantsOrganizer ? "organizer" : null);
   const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [org, setOrg] = useState({ orgName: "", orgType: "komunitas" as OrganizerType, city: "", contact: "", description: "" });
+
+  // Akun sudah terdaftar sebagai penyelenggara di kontrak (mis. kembali dari wallet berbasis redirect,
+  // atau membuka dari browser baru): pulihkan profil lokalnya dari catatan on-chain
+  useEffect(() => {
+    if (!hydrated || !isReady || !accountId || !onchain.data) return;
+    if (existing?.roles.includes("organizer")) return;
+    let draftName = "";
+    try {
+      draftName = (JSON.parse(localStorage.getItem(DRAFT_KEY) ?? "{}") as { name?: string }).name ?? "";
+    } catch {
+      // abaikan draft rusak
+    }
+    const o = onchain.data.profile;
+    const organizer = { orgName: o.name, orgType: asOrgType(o.org_type), city: o.city, contact: o.contact, description: o.description };
+    if (existing) {
+      addOrganizerRole(accountId, organizer);
+    } else {
+      saveProfile({
+        accountId,
+        name: draftName.trim() || o.name,
+        roles: ["buyer", "organizer"],
+        activeRole: "organizer",
+        organizer,
+        createdAt: new Date().toISOString(),
+      });
+    }
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      // abaikan
+    }
+  }, [hydrated, isReady, accountId, onchain.data, existing, addOrganizerRole, saveProfile]);
 
   // Profil sudah ada & tidak sedang menambah peran: langsung ke dashboard
   useEffect(() => {
@@ -64,23 +107,47 @@ function Onboarding() {
     router.push("/dashboard");
   };
 
-  const finishOrganizer = (e: React.FormEvent) => {
+  const finishOrganizer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!accountId) return;
+    setError(null);
     const organizer = { ...org, orgName: org.orgName.trim() };
-    if (existing) {
-      addOrganizerRole(accountId, organizer);
-    } else {
-      saveProfile({
-        accountId,
-        name: name.trim() || organizer.orgName,
-        roles: ["buyer", "organizer"],
-        activeRole: "organizer",
-        organizer,
-        createdAt: new Date().toISOString(),
-      });
+
+    setBusy(true);
+    try {
+      // Pendaftaran dicatat permanen di kontrak supaya penyelenggara bisa dilacak jika ada kasus
+      const registered = await onchain.refetch();
+      if (!registered.data) {
+        try {
+          localStorage.setItem(DRAFT_KEY, JSON.stringify({ name: name.trim() }));
+        } catch {
+          // abaikan
+        }
+        await sendTransactions(
+          [registerOrganizerTx({ name: organizer.orgName, orgType: organizer.orgType, city: organizer.city, contact: organizer.contact, description: organizer.description })],
+          { callbackUrl: `${window.location.origin}/onboarding?role=organizer` }
+        );
+      }
+      // Profil lokal diisi oleh efek di atas begitu catatan on-chain terbaca
+      await onchain.refetch();
+      if (existing) {
+        addOrganizerRole(accountId, organizer);
+      } else {
+        saveProfile({
+          accountId,
+          name: name.trim() || organizer.orgName,
+          roles: ["buyer", "organizer"],
+          activeRole: "organizer",
+          organizer,
+          createdAt: new Date().toISOString(),
+        });
+      }
+      router.push("/organizer");
+    } catch (err) {
+      setError(explainChainError(err));
+    } finally {
+      setBusy(false);
     }
-    router.push("/organizer");
   };
 
   return (
@@ -172,7 +239,9 @@ function Onboarding() {
           <form onSubmit={finishOrganizer} className="space-y-8">
             <div className="space-y-3">
               <h1 className="text-[40px] md:text-[48px] font-extrabold tracking-[-0.04em] leading-none">Ceritakan komunitasmu.</h1>
-              <p className="text-[#141414]/60 max-w-xl">Data ini tampil di halaman event-mu. Tidak ada dokumen atau KYC yang diminta.</p>
+              <p className="text-[#141414]/60 max-w-xl">
+                Data ini tampil di halaman event-mu dan dicatat permanen di NEAR atas nama akun walletmu, supaya pembeli bisa mengecek siapa penyelenggaranya dan kasus bisa dilacak. Tidak ada dokumen atau KYC yang diminta.
+              </p>
             </div>
 
             <div className="grid sm:grid-cols-2 gap-5">
@@ -220,13 +289,16 @@ function Onboarding() {
               </label>
             </div>
 
+            {error && <p className="text-[#E5484D] font-medium">{error}</p>}
+
             <div className="flex items-center gap-4">
               <button
                 type="submit"
-                className="inline-flex items-center gap-4 px-8 py-3.5 rounded-full text-[15px] font-semibold text-[#141414] transition-shadow hover:shadow-[0_0_40px_rgba(156,255,30,0.6)]"
+                disabled={busy}
+                className="inline-flex items-center gap-4 px-8 py-3.5 rounded-full text-[15px] font-semibold text-[#141414] transition-shadow hover:shadow-[0_0_40px_rgba(156,255,30,0.6)] disabled:opacity-60"
                 style={{ background: "linear-gradient(180deg, #C6FF6B 0%, #9CFF1E 100%)" }}
               >
-                Buka panel penyelenggara <ArrowUpRight className="w-4 h-4" />
+                {busy ? "Menunggu wallet…" : onchain.data ? "Buka panel penyelenggara" : "Daftar on-chain & buka panel"} <ArrowUpRight className="w-4 h-4" />
               </button>
               {!existing && <button type="button" onClick={() => setRole(null)} className="text-sm text-[#141414]/50 hover:text-[#141414]">Kembali</button>}
             </div>

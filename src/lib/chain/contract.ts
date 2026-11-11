@@ -4,7 +4,9 @@ import type {
   ChainCampaign,
   ChainConfig,
   ChainEvent,
+  ChainListing,
   ChainNft,
+  ChainOrganizer,
   ChainPass,
   ChainPoll,
   ChainQuote,
@@ -35,10 +37,32 @@ export const chain = {
   stampsWith: (account: string, organizer: string) =>
     viewCall<number>("stamps_with", { account_id: account, organizer }),
   isOrganizer: (account: string) => viewCall<boolean>("is_organizer", { account_id: account }),
+  /** Catatan penyelenggara on-chain (profil, status, riwayat kasus); null jika belum terdaftar */
+  organizer: (account: string) => viewCall<ChainOrganizer | null>("get_organizer", { account_id: account }),
+  organizers: async (): Promise<ChainOrganizer[]> => {
+    const out: ChainOrganizer[] = [];
+    for (let from = 0; from < 1000; from += 100) {
+      const page = await viewCall<ChainOrganizer[]>("get_organizers", { from_index: from, limit: 100 });
+      out.push(...page);
+      if (page.length < 100) break;
+    }
+    return out;
+  },
 
   campaign: (eventId: string) => viewCall<ChainCampaign | null>("get_campaign", { event_id: eventId }),
   campaignsJoinedBy: (account: string) => viewCall<string[]>("campaigns_joined_by", { account_id: account }),
   unclaimed: async (account: string) => (await viewCall<string>("unclaimed_of", { account_id: account })) ?? "0",
+
+  listings: async (): Promise<ChainListing[]> => {
+    const out: ChainListing[] = [];
+    for (let from = 0; from < 1000; from += 100) {
+      const page = await viewCall<ChainListing[]>("get_listings", { from_index: from, limit: 100 });
+      out.push(...page);
+      if (page.length < 100) break;
+    }
+    return out;
+  },
+  listing: (passId: string) => viewCall<ChainListing | null>("get_listing", { pass_id: passId }),
 
   polls: () => viewCall<ChainPoll[]>("get_polls"),
   myVote: (pollId: string, account: string) => viewCall<number | null>("my_vote", { poll_id: pollId, account_id: account }),

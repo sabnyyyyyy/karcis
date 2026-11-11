@@ -49,6 +49,8 @@ const MAX_CAPACITY: u32 = 100_000;
 const MAX_PARTICIPANTS: usize = 100;
 const MAX_CLIPS: usize = 300;
 const MAX_CLIPS_PER_PARTICIPANT: usize = 5;
+/// Catatan kasus (laporan + tindakan admin) yang disimpan per penyelenggara
+const MAX_CASES: usize = 100;
 
 /// Biaya platform: 3,4% (340 basis point per 10.000), selalu, seluruhnya ke platform
 pub const SERVICE_FEE_BPS: u128 = 340;
@@ -81,6 +83,9 @@ enum StorageKey {
     Unclaimed,
     Campaigns,
     EventCodes,
+    OrganizerRecords,
+    Listings,
+    Reissued,
 }
 
 /// Antarmuka kontrak token (NEP-141 + NEP-145) yang kita panggil
@@ -336,9 +341,12 @@ pub struct Quote {
 /// Isi `msg` pada `ft_transfer_call`
 #[near(serializers = [json])]
 pub struct TokenMessage {
-    /// `"buy"` (default) atau `"fund_campaign"`
+    /// `"buy"` (default), `"fund_campaign"`, atau `"buy_resale"`
     pub action: Option<String>,
+    #[serde(default)]
     pub event_id: String,
+    /// Untuk `buy_resale`: id pass yang dibeli dari pasar tiket
+    pub pass_id: Option<String>,
     pub tier_id: Option<String>,
     /// Akun clipper pemilik link referral
     pub referrer: Option<AccountId>,
@@ -349,6 +357,7 @@ pub struct Config {
     pub stable_token: AccountId,
     pub treasury: AccountId,
     pub verifier: AccountId,
+    pub admin: AccountId,
     pub service_fee_bps: u32,
     pub clip_pool_bps: u32,
     pub referral_pool_bps: u32,
@@ -387,13 +396,133 @@ pub struct NftToken {
     pub metadata: TokenMetadata,
 }
 
+/// Status penyelenggara di platform
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum OrganizerStatus {
+    /// Boleh membuat event, voting, dan menjual tiket
+    Active,
+    /// Ditangguhkan sementara: tidak bisa membuat event/voting dan penjualan tiketnya berhenti
+    Suspended,
+    /// Diblokir permanen kecuali dipulihkan admin: sama seperti ditangguhkan, ditambah check-in ditolak
+    Banned,
+}
+
+/// Data diri penyelenggara yang diisi saat mendaftar (tidak bisa diubah, supaya jejaknya utuh)
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug)]
+pub struct OrganizerProfile {
+    pub name: String,
+    /// Mis. "komunitas", "kolektif", "venue", "individu"
+    pub org_type: String,
+    pub city: String,
+    /// Kontak publik (Instagram, email, dsb.) supaya pembeli bisa menghubungi
+    pub contact: String,
+    pub description: String,
+}
+
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum CaseKind {
+    /// Laporan dari pemegang pass
+    Report,
+    Suspend,
+    Ban,
+    Reinstate,
+    /// Penyelenggara mengubah profilnya (nilai lama dicatat di alasan)
+    ProfileUpdate,
+}
+
+/// Satu catatan di riwayat kasus penyelenggara
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug)]
+pub struct CaseEntry {
+    pub at: U64,
+    pub kind: CaseKind,
+    pub by: AccountId,
+    pub reason: String,
+}
+
+#[near(serializers = [borsh])]
+#[derive(Clone, Debug)]
+pub struct OrganizerRecord {
+    pub profile: OrganizerProfile,
+    pub status: OrganizerStatus,
+    pub registered_at: u64,
+    pub status_changed_at: u64,
+    pub cases: Vec<CaseEntry>,
+}
+
+#[near(serializers = [json])]
+pub struct OrganizerView {
+    pub account_id: AccountId,
+    pub profile: OrganizerProfile,
+    pub status: OrganizerStatus,
+    pub registered_at: U64,
+    pub status_changed_at: U64,
+    /// Jumlah laporan dari pembeli
+    pub reports: u32,
+    pub cases: Vec<CaseEntry>,
+}
+
+/// Pass yang dijual ulang oleh pemiliknya (pasar tiket)
+#[near(serializers = [borsh])]
+#[derive(Clone, Debug)]
+pub struct Listing {
+    pub pass_id: String,
+    pub seller: AccountId,
+    /// Harga jual (satuan terkecil token), maksimal harga asli pass
+    pub price: u128,
+    pub listed_at: u64,
+}
+
+#[near(serializers = [json])]
+pub struct ListingView {
+    pub pass_id: String,
+    pub event_id: String,
+    pub tier_id: String,
+    pub seller: AccountId,
+    /// Harga yang dibayar pembeli
+    pub price: U128,
+    /// Harga asli pass (batas harga jual ulang)
+    pub face_value: U128,
+    /// Biaya platform 3,4% yang dipotong dari penjual
+    pub platform_fee: U128,
+    pub seller_receives: U128,
+    pub listed_at: U64,
+}
+
+/// State versi sebelumnya (dengan registri penyelenggara, sebelum pasar tiket), dipakai `migrate`
+#[near(serializers = [borsh])]
+struct ContractV2 {
+    events: IterableMap<String, Event>,
+    passes: LookupMap<String, Pass>,
+    owner_passes: LookupMap<AccountId, Vec<String>>,
+    organizers: IterableMap<AccountId, OrganizerRecord>,
+    polls: IterableMap<String, Poll>,
+    campaigns: LookupMap<String, CampaignState>,
+    event_codes: LookupMap<String, String>,
+    unclaimed: LookupMap<AccountId, u128>,
+    stable_token: AccountId,
+    treasury: AccountId,
+    verifier: AccountId,
+    admin: AccountId,
+    min_paid_price: u128,
+    next_event: u64,
+    next_pass: u64,
+    next_poll: u64,
+}
+
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
 pub struct Contract {
     events: IterableMap<String, Event>,
     passes: LookupMap<String, Pass>,
     owner_passes: LookupMap<AccountId, Vec<String>>,
-    organizers: LookupMap<AccountId, bool>,
+    /// Registri penyelenggara (profil, status, riwayat kasus)
+    organizers: IterableMap<AccountId, OrganizerRecord>,
     polls: IterableMap<String, Poll>,
     campaigns: LookupMap<String, CampaignState>,
     /// kode event -> id event (menjamin kode unik)
@@ -406,6 +535,14 @@ pub struct Contract {
     treasury: AccountId,
     /// Akun yang melaporkan jumlah view clip setelah event selesai
     verifier: AccountId,
+    /// Pasar tiket: pass yang sedang dijual ulang, kunci = id pass
+    listings: IterableMap<String, Listing>,
+    /// event id -> jumlah pass yang sudah diterbitkan ulang lewat jual ulang (untuk nomor urut unik)
+    reissued: LookupMap<String, u32>,
+    /// Jumlah pass yang di-burn (diganti pass baru saat jual ulang)
+    burned: u64,
+    /// Admin platform: menangguhkan/memblokir/memulihkan penyelenggara
+    admin: AccountId,
     /// Harga minimum untuk pass berbayar (satuan terkecil token)
     min_paid_price: u128,
     next_event: u64,
@@ -492,13 +629,17 @@ impl Contract {
             events: IterableMap::new(StorageKey::Events),
             passes: LookupMap::new(StorageKey::Passes),
             owner_passes: LookupMap::new(StorageKey::OwnerPasses),
-            organizers: LookupMap::new(StorageKey::Organizers),
+            organizers: IterableMap::new(StorageKey::OrganizerRecords),
             polls: IterableMap::new(StorageKey::Polls),
             campaigns: LookupMap::new(StorageKey::Campaigns),
             event_codes: LookupMap::new(StorageKey::EventCodes),
             unclaimed: LookupMap::new(StorageKey::Unclaimed),
             stable_token,
             treasury,
+            listings: IterableMap::new(StorageKey::Listings),
+            reissued: LookupMap::new(StorageKey::Reissued),
+            burned: 0,
+            admin: verifier.clone(),
             verifier,
             min_paid_price: min_paid_price.0,
             next_event: 0,
@@ -518,6 +659,7 @@ impl Contract {
         let storage_before = env::storage_usage();
         let owner = env::predecessor_account_id();
 
+        self.require_active_organizer(&owner);
         require!(!input.title.trim().is_empty(), "Judul event wajib diisi");
         require!(!input.tiers.is_empty() && input.tiers.len() <= MAX_TIERS, "Event butuh 1 sampai 6 jenis pass");
         require!(
@@ -628,7 +770,6 @@ impl Contract {
         };
         self.events.insert(id.clone(), event.clone());
         self.event_codes.insert(code, id.clone());
-        self.organizers.insert(owner.clone(), true);
         if has_campaign {
             self.campaigns.insert(
                 id.clone(),
@@ -638,7 +779,6 @@ impl Contract {
         // Tulis ke storage sekarang supaya ukurannya bisa dihitung
         self.events.flush();
         self.event_codes.flush();
-        self.organizers.flush();
         self.campaigns.flush();
 
         // Daftarkan pemilik di kontrak token supaya bisa menerima pembayaran
@@ -663,6 +803,220 @@ impl Contract {
     }
 
     // ------------------------------------------------------------------
+    // Registri penyelenggara: pendaftaran, laporan, dan tindakan admin tercatat on-chain
+    // ------------------------------------------------------------------
+
+    /// Daftar sebagai penyelenggara. Wajib sebelum membuat event atau voting. Data diri dicatat
+    /// permanen di sini supaya bisa dilacak jika ada kasus. Pendaftar membayar biaya penyimpanan
+    /// (kelebihan deposit dikembalikan).
+    #[payable]
+    pub fn register_organizer(&mut self, profile: OrganizerProfile) -> OrganizerView {
+        let storage_before = env::storage_usage();
+        let who = env::predecessor_account_id();
+        require!(!self.organizers.contains_key(&who), "Akun ini sudah terdaftar sebagai penyelenggara");
+        let profile = Self::clean_profile(profile);
+        let now = env::block_timestamp();
+        let record = OrganizerRecord {
+            profile,
+            status: OrganizerStatus::Active,
+            registered_at: now,
+            status_changed_at: now,
+            cases: Vec::new(),
+        };
+        let view = Self::organizer_view(&who, &record);
+        self.organizers.insert(who.clone(), record);
+        self.organizers.flush();
+        Self::settle_storage(storage_before, who.clone(), ZERO);
+        emit("organizer_registered", json!({ "account": who }));
+        view
+    }
+
+    /// Laporkan penyelenggara. Hanya pemegang pass dari event milik penyelenggara itu, satu laporan
+    /// per akun. Pelapor membayar biaya penyimpanan catatannya.
+    #[payable]
+    pub fn report_organizer(&mut self, organizer: AccountId, reason: String) {
+        let storage_before = env::storage_usage();
+        let reporter = env::predecessor_account_id();
+        let reason = reason.trim().to_string();
+        require!(reason.len() >= 10, "Alasan laporan minimal 10 karakter");
+        check_len(&reason, 500, "Alasan");
+        require!(reporter != organizer, "Tidak bisa melaporkan diri sendiri");
+        require!(
+            self.has_pass_from(&reporter, &organizer),
+            "Hanya pemegang pass dari event penyelenggara ini yang bisa melapor"
+        );
+        let now = env::block_timestamp();
+        let record = self
+            .organizers
+            .get_mut(&organizer)
+            .unwrap_or_else(|| env::panic_str("Penyelenggara tidak terdaftar"));
+        require!(
+            !record.cases.iter().any(|c| c.kind == CaseKind::Report && c.by == reporter),
+            "Kamu sudah melaporkan penyelenggara ini"
+        );
+        require!(record.cases.len() < MAX_CASES, "Catatan kasus penyelenggara ini sudah penuh");
+        record.cases.push(CaseEntry { at: U64(now), kind: CaseKind::Report, by: reporter.clone(), reason });
+        self.organizers.flush();
+        Self::settle_storage(storage_before, reporter.clone(), ZERO);
+        emit("organizer_reported", json!({ "organizer": organizer, "reporter": reporter }));
+    }
+
+    /// Ubah profil (mis. pindah kota). Nilai lama dicatat di riwayat kasus, jadi perubahan tetap
+    /// bisa dilacak. Pengubah membayar penyimpanan catatannya. Akun yang diblokir tidak bisa mengubah.
+    #[payable]
+    pub fn update_organizer_profile(&mut self, profile: OrganizerProfile) -> OrganizerView {
+        let storage_before = env::storage_usage();
+        let who = env::predecessor_account_id();
+        let profile = Self::clean_profile(profile);
+        let now = env::block_timestamp();
+        let record = self
+            .organizers
+            .get_mut(&who)
+            .unwrap_or_else(|| env::panic_str("Penyelenggara tidak terdaftar"));
+        require!(record.status != OrganizerStatus::Banned, "Akun yang diblokir tidak bisa mengubah profil");
+        require!(record.cases.len() < MAX_CASES, "Catatan kasus penyelenggara ini sudah penuh");
+
+        let old = &record.profile;
+        let mut changes: Vec<String> = Vec::new();
+        if old.name != profile.name {
+            changes.push(format!("nama: {} -> {}", old.name, profile.name));
+        }
+        if old.org_type != profile.org_type {
+            changes.push(format!("jenis: {} -> {}", old.org_type, profile.org_type));
+        }
+        if old.city != profile.city {
+            changes.push(format!("kota: {} -> {}", old.city, profile.city));
+        }
+        if old.contact != profile.contact {
+            changes.push(format!("kontak: {} -> {}", old.contact, profile.contact));
+        }
+        if old.description != profile.description {
+            changes.push("deskripsi diubah".to_string());
+        }
+        require!(!changes.is_empty(), "Tidak ada perubahan");
+        let mut summary = changes.join("; ");
+        if summary.len() > 500 {
+            let mut cut = 500;
+            while !summary.is_char_boundary(cut) {
+                cut -= 1;
+            }
+            summary.truncate(cut);
+        }
+
+        record.profile = profile;
+        record.cases.push(CaseEntry { at: U64(now), kind: CaseKind::ProfileUpdate, by: who.clone(), reason: summary });
+        let view = Self::organizer_view(&who, record);
+        self.organizers.flush();
+        Self::settle_storage(storage_before, who.clone(), ZERO);
+        emit("organizer_updated", json!({ "account": who }));
+        view
+    }
+
+    /// Admin: tangguhkan penyelenggara (penjualan tiketnya berhenti, tidak bisa buat event/voting)
+    #[payable]
+    pub fn suspend_organizer(&mut self, organizer: AccountId, reason: String) {
+        self.apply_status(organizer, OrganizerStatus::Suspended, CaseKind::Suspend, reason);
+    }
+
+    /// Admin: blokir penyelenggara (seperti ditangguhkan, ditambah check-in event-nya ditolak)
+    #[payable]
+    pub fn ban_organizer(&mut self, organizer: AccountId, reason: String) {
+        self.apply_status(organizer, OrganizerStatus::Banned, CaseKind::Ban, reason);
+    }
+
+    /// Admin: pulihkan penyelenggara yang ditangguhkan/diblokir
+    #[payable]
+    pub fn reinstate_organizer(&mut self, organizer: AccountId, reason: String) {
+        self.apply_status(organizer, OrganizerStatus::Active, CaseKind::Reinstate, reason);
+    }
+
+    /// Admin: serahkan peran admin ke akun lain
+    pub fn set_admin(&mut self, new_admin: AccountId) {
+        require!(env::predecessor_account_id() == self.admin, "Hanya admin");
+        self.admin = new_admin.clone();
+        emit("admin_changed", json!({ "admin": new_admin }));
+    }
+
+    /// Migrasi dari state sebelum pasar tiket. Hanya akun kontrak sendiri; semua data lama dipertahankan.
+    #[private]
+    #[init(ignore_state)]
+    pub fn migrate() -> Self {
+        let old: ContractV2 = env::state_read().unwrap_or_else(|| env::panic_str("State lama tidak ditemukan"));
+        Self {
+            events: old.events,
+            passes: old.passes,
+            owner_passes: old.owner_passes,
+            organizers: old.organizers,
+            polls: old.polls,
+            campaigns: old.campaigns,
+            event_codes: old.event_codes,
+            unclaimed: old.unclaimed,
+            stable_token: old.stable_token,
+            treasury: old.treasury,
+            verifier: old.verifier,
+            listings: IterableMap::new(StorageKey::Listings),
+            reissued: LookupMap::new(StorageKey::Reissued),
+            burned: 0,
+            admin: old.admin,
+            min_paid_price: old.min_paid_price,
+            next_event: old.next_event,
+            next_pass: old.next_pass,
+            next_poll: old.next_poll,
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Pasar tiket: jual ulang pass yang tidak jadi dipakai
+    // ------------------------------------------------------------------
+
+    /// Jual pass yang belum dipakai. Harga maksimal harga asli pass (anti calo). Saat ada yang membeli,
+    /// pass lama di-burn dan pembeli menerima pass baru; penjual menerima harga dikurangi biaya platform 3,4%.
+    /// Penjual membayar tepat biaya penyimpanan listing (kelebihan dikembalikan).
+    #[payable]
+    pub fn list_pass_for_resale(&mut self, pass_id: String, price: U128) -> ListingView {
+        let storage_before = env::storage_usage();
+        let seller = env::predecessor_account_id();
+        let pass = self.passes.get(&pass_id).unwrap_or_else(|| env::panic_str("Pass tidak ditemukan")).clone();
+        require!(pass.owner == seller, "Hanya pemilik pass yang bisa menjualnya");
+        require!(pass.status == PassStatus::Valid, "Pass yang sudah dipakai tidak bisa dijual");
+        require!(!self.listings.contains_key(&pass_id), "Pass ini sudah dijual");
+        let (event_owner, ends_at, face) = {
+            let event = self.events.get(&pass.event_id).unwrap_or_else(|| env::panic_str("Event tidak ditemukan"));
+            let tier = event
+                .tiers
+                .iter()
+                .find(|t| t.id == pass.tier_id)
+                .unwrap_or_else(|| env::panic_str("Jenis pass tidak ditemukan"));
+            (event.owner.clone(), event.ends_at.0, tier.price.0)
+        };
+        require!(env::block_timestamp() < ends_at, "Event sudah selesai, pass tidak bisa dijual");
+        require!(face > 0, "Pass gratis tidak bisa dijual ulang");
+        require!(
+            self.status_of(&event_owner) == OrganizerStatus::Active,
+            "Penjualan dihentikan: penyelenggara event ini sedang ditangguhkan"
+        );
+        require!(price.0 >= self.min_paid_price, "Harga jual di bawah harga minimum");
+        require!(price.0 <= face, "Harga jual ulang tidak boleh melebihi harga asli pass");
+
+        let listing = Listing { pass_id: pass_id.clone(), seller: seller.clone(), price: price.0, listed_at: env::block_timestamp() };
+        let view = Self::listing_view(&listing, &pass, face);
+        self.listings.insert(pass_id.clone(), listing);
+        self.listings.flush();
+        Self::settle_storage(storage_before, seller.clone(), ZERO);
+        emit("pass_listed", json!({ "pass_id": pass_id, "seller": seller, "price": price }));
+        view
+    }
+
+    /// Batalkan penjualan (hanya penjual)
+    pub fn cancel_resale(&mut self, pass_id: String) {
+        let caller = env::predecessor_account_id();
+        let listing = self.listings.get(&pass_id).unwrap_or_else(|| env::panic_str("Pass ini tidak sedang dijual"));
+        require!(listing.seller == caller, "Hanya penjual yang bisa membatalkan");
+        self.listings.remove(&pass_id);
+        emit("pass_unlisted", json!({ "pass_id": pass_id, "seller": caller }));
+    }
+
+    // ------------------------------------------------------------------
     // Pembayaran masuk (stablecoin): beli pass atau setor deposit kampanye
     // ------------------------------------------------------------------
 
@@ -679,6 +1033,7 @@ impl Contract {
         let unused = match m.action.as_deref() {
             None | Some("buy") => self.buy(sender_id, amount.0, m),
             Some("fund_campaign") => self.fund_campaign(sender_id, amount.0, m.event_id),
+            Some("buy_resale") => self.buy_resale(sender_id, amount.0, m),
             Some(_) => env::panic_str("Aksi pembayaran tidak dikenal"),
         };
         PromiseOrValue::Value(U128(unused))
@@ -728,6 +1083,10 @@ impl Contract {
                 event.owner == caller || event.scanners.contains(&caller),
                 "Hanya penyelenggara atau petugas scan event ini"
             );
+            require!(
+                self.organizers.get(&event.owner).map(|r| r.status != OrganizerStatus::Banned).unwrap_or(true),
+                "Penyelenggara event ini diblokir, check-in ditolak"
+            );
             require!(current.status == PassStatus::Valid, "Pass sudah dipakai");
             event.checked_in += 1;
         }
@@ -739,6 +1098,8 @@ impl Contract {
             ..current
         };
         self.passes.insert(pass_id.clone(), updated.clone());
+        // Pass yang dipakai masuk tidak boleh lagi dijual
+        self.listings.remove(&pass_id);
         emit("check_in", json!({ "pass_id": pass_id, "owner": updated.owner, "stamps": updated.stamps }));
         updated
     }
@@ -934,7 +1295,7 @@ impl Contract {
     pub fn create_poll(&mut self, question: String, options: Vec<String>) -> PollView {
         let storage_before = env::storage_usage();
         let creator = env::predecessor_account_id();
-        require!(self.organizers.get(&creator).copied().unwrap_or(false), "Hanya penyelenggara yang bisa membuat voting");
+        self.require_active_organizer(&creator);
         let question = question.trim().to_string();
         require!(!question.is_empty(), "Pertanyaan wajib diisi");
         check_len(&question, 200, "Pertanyaan");
@@ -1009,6 +1370,7 @@ impl Contract {
             stable_token: self.stable_token.clone(),
             treasury: self.treasury.clone(),
             verifier: self.verifier.clone(),
+            admin: self.admin.clone(),
             service_fee_bps: SERVICE_FEE_BPS as u32,
             clip_pool_bps: CLIP_POOL_BPS as u32,
             referral_pool_bps: REFERRAL_POOL_BPS as u32,
@@ -1116,8 +1478,45 @@ impl Contract {
             .unwrap_or(0)
     }
 
+    /// Semua pass yang sedang dijual (terbaru di atas)
+    pub fn get_listings(&self, from_index: u64, limit: u64) -> Vec<ListingView> {
+        let mut all: Vec<ListingView> = self.listings.values().filter_map(|l| self.listing_view_of(l)).collect();
+        all.sort_by(|a, b| b.listed_at.0.cmp(&a.listed_at.0));
+        all.into_iter().skip(from_index as usize).take(limit.min(100) as usize).collect()
+    }
+
+    pub fn get_listing(&self, pass_id: String) -> Option<ListingView> {
+        self.listings.get(&pass_id).and_then(|l| self.listing_view_of(l))
+    }
+
+    pub fn listings_count(&self) -> u32 {
+        self.listings.len()
+    }
+
+    pub fn get_organizer(&self, account_id: AccountId) -> Option<OrganizerView> {
+        self.organizers.get(&account_id).map(|r| Self::organizer_view(&account_id, r))
+    }
+
+    /// Semua penyelenggara terdaftar (urut pendaftaran), untuk pelacakan
+    pub fn get_organizers(&self, from_index: u64, limit: u64) -> Vec<OrganizerView> {
+        self.organizers
+            .iter()
+            .skip(from_index as usize)
+            .take(limit.min(100) as usize)
+            .map(|(a, r)| Self::organizer_view(a, r))
+            .collect()
+    }
+
+    pub fn organizers_count(&self) -> u32 {
+        self.organizers.len()
+    }
+
+    pub fn get_admin(&self) -> AccountId {
+        self.admin.clone()
+    }
+
     pub fn is_organizer(&self, account_id: AccountId) -> bool {
-        self.organizers.get(&account_id).copied().unwrap_or(false)
+        self.organizers.get(&account_id).map(|r| r.status == OrganizerStatus::Active).unwrap_or(false)
     }
 
     /// Jumlah stablecoin yang menunggu diklaim akun ini
@@ -1153,7 +1552,7 @@ impl Contract {
     }
 
     pub fn nft_total_supply(&self) -> U128 {
-        U128(self.next_pass as u128)
+        U128(self.next_pass.saturating_sub(self.burned) as u128)
     }
 
     pub fn nft_token(&self, token_id: String) -> Option<NftToken> {
@@ -1184,6 +1583,129 @@ fn register_on_token(token: AccountId, deposit: NearToken, account: AccountId) -
 }
 
 impl Contract {
+    /// Beli pass dari pasar tiket: pass lama di-burn, pembeli menerima pass baru. Mengembalikan kelebihan bayar.
+    fn buy_resale(&mut self, buyer: AccountId, amount: u128, m: TokenMessage) -> u128 {
+        let pass_id = m.pass_id.unwrap_or_else(|| env::panic_str("pass_id wajib diisi"));
+        let listing = self.listings.get(&pass_id).unwrap_or_else(|| env::panic_str("Pass ini tidak sedang dijual")).clone();
+        require!(listing.seller != buyer, "Tidak bisa membeli pass sendiri");
+        let old = self.passes.get(&pass_id).unwrap_or_else(|| env::panic_str("Pass tidak ditemukan")).clone();
+        require!(old.owner == listing.seller && old.status == PassStatus::Valid, "Pass ini sudah tidak tersedia");
+        let (event_owner, ends_at) = {
+            let e = self.events.get(&old.event_id).unwrap_or_else(|| env::panic_str("Event tidak ditemukan"));
+            (e.owner.clone(), e.ends_at.0)
+        };
+        require!(env::block_timestamp() < ends_at, "Penjualan sudah ditutup, event telah selesai");
+        require!(
+            self.status_of(&event_owner) == OrganizerStatus::Active,
+            "Penjualan dihentikan: penyelenggara event ini sedang ditangguhkan"
+        );
+        require!(amount >= listing.price, "Pembayaran kurang dari harga jual");
+
+        let fee = listing.price * SERVICE_FEE_BPS / BPS_DENOMINATOR;
+        let seller_gets = listing.price - fee;
+
+        self.listings.remove(&pass_id);
+        self.burn_pass(&old);
+        let new_pass = self.reissue_pass(buyer.clone(), &old);
+
+        if seller_gets > 0 {
+            let _ = self.pay_out(listing.seller.clone(), seller_gets);
+        }
+        if fee > 0 {
+            let _ = self.pay_out(self.treasury.clone(), fee);
+        }
+        emit(
+            "pass_resold",
+            json!({
+                "old_pass_id": old.id, "new_pass_id": new_pass.id, "event_id": old.event_id,
+                "seller": listing.seller, "buyer": buyer, "price": U128(listing.price), "fee": U128(fee)
+            }),
+        );
+        amount - listing.price
+    }
+
+    /// Hapus pass dari kontrak (NEP-171 nft_burn). Penghitung penjualan event tidak berubah.
+    fn burn_pass(&mut self, pass: &Pass) {
+        self.passes.remove(&pass.id);
+        if let Some(list) = self.owner_passes.get_mut(&pass.owner) {
+            list.retain(|id| *id != pass.id);
+        }
+        self.burned += 1;
+        env::log_str(&format!(
+            "EVENT_JSON:{}",
+            json!({
+                "standard": "nep171",
+                "version": "1.2.0",
+                "event": "nft_burn",
+                "data": [{ "owner_id": pass.owner, "token_ids": [pass.id] }]
+            })
+        ));
+    }
+
+    /// Cetak pass pengganti untuk pembeli. Nomor urut = kapasitas + urutan penerbitan ulang, jadi
+    /// tidak pernah bentrok dengan nomor penjualan awal (1..kapasitas).
+    fn reissue_pass(&mut self, owner: AccountId, old: &Pass) -> Pass {
+        let (capacity, code) = self
+            .events
+            .get(&old.event_id)
+            .map(|e| (e.capacity, e.code.clone()))
+            .unwrap_or_else(|| env::panic_str("Event tidak ditemukan"));
+        let n = self.reissued.get(&old.event_id).copied().unwrap_or(0) + 1;
+        self.reissued.insert(old.event_id.clone(), n);
+        let serial = capacity + n;
+        self.next_pass += 1;
+        let id = format!("{code}-{serial:04}");
+        let pass = Pass {
+            id: id.clone(),
+            event_id: old.event_id.clone(),
+            tier_id: old.tier_id.clone(),
+            serial,
+            owner: owner.clone(),
+            status: PassStatus::Valid,
+            stamps: old.stamps,
+            minted_at: U64(env::block_timestamp()),
+            checked_in_at: None,
+            checked_in_by: None,
+        };
+        self.passes.insert(id.clone(), pass.clone());
+        if let Some(list) = self.owner_passes.get_mut(&owner) {
+            list.push(id.clone());
+        } else {
+            self.owner_passes.insert(owner.clone(), vec![id.clone()]);
+        }
+        env::log_str(&format!(
+            "EVENT_JSON:{}",
+            json!({
+                "standard": "nep171",
+                "version": "1.2.0",
+                "event": "nft_mint",
+                "data": [{ "owner_id": owner, "token_ids": [id] }]
+            })
+        ));
+        pass
+    }
+
+    fn listing_view(l: &Listing, pass: &Pass, face: u128) -> ListingView {
+        let fee = l.price * SERVICE_FEE_BPS / BPS_DENOMINATOR;
+        ListingView {
+            pass_id: l.pass_id.clone(),
+            event_id: pass.event_id.clone(),
+            tier_id: pass.tier_id.clone(),
+            seller: l.seller.clone(),
+            price: U128(l.price),
+            face_value: U128(face),
+            platform_fee: U128(fee),
+            seller_receives: U128(l.price - fee),
+            listed_at: U64(l.listed_at),
+        }
+    }
+
+    fn listing_view_of(&self, l: &Listing) -> Option<ListingView> {
+        let pass = self.passes.get(&l.pass_id)?;
+        let face = self.events.get(&pass.event_id)?.tiers.iter().find(|t| t.id == pass.tier_id)?.price.0;
+        Some(Self::listing_view(l, pass, face))
+    }
+
     /// Beli pass berbayar dengan stablecoin. Mengembalikan jumlah yang tidak terpakai.
     fn buy(&mut self, buyer: AccountId, amount: u128, m: TokenMessage) -> u128 {
         let tier_id = m.tier_id.unwrap_or_else(|| env::panic_str("tier_id wajib diisi"));
@@ -1271,6 +1793,11 @@ impl Contract {
             .map(|e| (e.stamps, e.capacity, e.sold, e.code.clone()))
             .unwrap_or_else(|| env::panic_str("Event tidak ditemukan"));
         require!(sold < capacity, "Tiket sudah habis");
+        let owner_acc = self.events.get(event_id).map(|e| e.owner.clone()).unwrap_or_else(|| env::panic_str("Event tidak ditemukan"));
+        require!(
+            self.status_of(&owner_acc) == OrganizerStatus::Active,
+            "Penjualan dihentikan: penyelenggara event ini sedang ditangguhkan"
+        );
 
         // ID = kode event + nomor urut per event: GIGS12-0001, GIGS12-0002, ...
         let serial = sold + 1;
@@ -1339,6 +1866,92 @@ impl Contract {
         let refund = deposit.saturating_sub(cost);
         if refund > ZERO {
             let _ = Promise::new(payer).transfer(refund);
+        }
+    }
+
+    fn status_of(&self, account: &AccountId) -> OrganizerStatus {
+        self.organizers.get(account).map(|r| r.status).unwrap_or(OrganizerStatus::Active)
+    }
+
+    /// Hanya penyelenggara terdaftar dan aktif
+    fn require_active_organizer(&self, account: &AccountId) {
+        let record = self
+            .organizers
+            .get(account)
+            .unwrap_or_else(|| env::panic_str("Daftar sebagai penyelenggara dulu (register_organizer)"));
+        require!(record.status == OrganizerStatus::Active, "Akun penyelenggara ini sedang ditangguhkan atau diblokir");
+    }
+
+    fn has_pass_from(&self, holder: &AccountId, organizer: &AccountId) -> bool {
+        self.owner_passes
+            .get(holder)
+            .map(|ids| {
+                ids.iter().any(|id| {
+                    self.passes
+                        .get(id)
+                        .and_then(|p| self.events.get(&p.event_id))
+                        .map(|e| e.owner == *organizer)
+                        .unwrap_or(false)
+                })
+            })
+            .unwrap_or(false)
+    }
+
+    fn apply_status(&mut self, organizer: AccountId, to: OrganizerStatus, kind: CaseKind, reason: String) {
+        let storage_before = env::storage_usage();
+        let admin = env::predecessor_account_id();
+        require!(admin == self.admin, "Hanya admin");
+        let reason = reason.trim().to_string();
+        require!(reason.len() >= 5, "Alasan wajib diisi (minimal 5 karakter)");
+        check_len(&reason, 500, "Alasan");
+        let now = env::block_timestamp();
+        let record = self
+            .organizers
+            .get_mut(&organizer)
+            .unwrap_or_else(|| env::panic_str("Penyelenggara tidak terdaftar"));
+        match to {
+            OrganizerStatus::Active => require!(record.status != OrganizerStatus::Active, "Penyelenggara sudah aktif"),
+            OrganizerStatus::Suspended => {
+                require!(record.status == OrganizerStatus::Active, "Hanya penyelenggara aktif yang bisa ditangguhkan")
+            }
+            OrganizerStatus::Banned => require!(record.status != OrganizerStatus::Banned, "Penyelenggara sudah diblokir"),
+        }
+        require!(record.cases.len() < MAX_CASES, "Catatan kasus penyelenggara ini sudah penuh");
+        record.status = to;
+        record.status_changed_at = now;
+        record.cases.push(CaseEntry { at: U64(now), kind, by: admin.clone(), reason });
+        self.organizers.flush();
+        Self::settle_storage(storage_before, admin, ZERO);
+        emit("organizer_status", json!({ "organizer": organizer, "status": to }));
+    }
+
+    fn clean_profile(p: OrganizerProfile) -> OrganizerProfile {
+        let p = OrganizerProfile {
+            name: p.name.trim().to_string(),
+            org_type: p.org_type.trim().to_ascii_lowercase(),
+            city: p.city.trim().to_string(),
+            contact: p.contact.trim().to_string(),
+            description: p.description.trim().to_string(),
+        };
+        require!(p.name.len() >= 2, "Nama penyelenggara minimal 2 karakter");
+        require!(!p.contact.is_empty(), "Kontak wajib diisi supaya pembeli bisa menghubungi");
+        check_len(&p.name, 80, "Nama penyelenggara");
+        check_len(&p.org_type, 20, "Jenis penyelenggara");
+        check_len(&p.city, 60, "Kota");
+        check_len(&p.contact, 120, "Kontak");
+        check_len(&p.description, 300, "Deskripsi");
+        OrganizerProfile { org_type: if p.org_type.is_empty() { "komunitas".to_string() } else { p.org_type }, ..p }
+    }
+
+    fn organizer_view(account: &AccountId, r: &OrganizerRecord) -> OrganizerView {
+        OrganizerView {
+            account_id: account.clone(),
+            profile: r.profile.clone(),
+            status: r.status,
+            registered_at: U64(r.registered_at),
+            status_changed_at: U64(r.status_changed_at),
+            reports: r.cases.iter().filter(|c| c.kind == CaseKind::Report).count() as u32,
+            cases: r.cases.clone(),
         }
     }
 

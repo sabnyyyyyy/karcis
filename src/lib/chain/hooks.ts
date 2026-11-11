@@ -146,4 +146,27 @@ export const useTokenRegistered = (account: string | null) =>
     queryFn: () => chain.tokenRegistered(account as string),
   });
 
+/** Pass yang sedang dijual ulang (terbaru di atas) */
+export const useListings = () =>
+  useQuery({ queryKey: ["listings"], staleTime: 5_000, refetchInterval: 20_000, queryFn: () => chain.listings() });
+
+export const useListing = (passId: string | undefined) =>
+  useQuery({
+    queryKey: ["listing", passId],
+    enabled: !!passId,
+    staleTime: 5_000,
+    queryFn: () => chain.listing(passId as string),
+  });
+
+/** Catatan penyelenggara on-chain; null = belum terdaftar */
+export const useOrganizer = (account: string | null | undefined) =>
+  useQuery({
+    queryKey: ["organizer", account],
+    enabled: !!account,
+    staleTime: 5_000,
+    queryFn: () => chain.organizer(account as string),
+  });
+
+export const useOrganizers = () => useQuery({ queryKey: ["organizers"], staleTime: 5_000, queryFn: () => chain.organizers() });
+
 export const useChainConfig = () => useQuery({ queryKey: ["config"], staleTime: 60_000, queryFn: () => chain.config() });

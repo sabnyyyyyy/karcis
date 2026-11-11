@@ -5,7 +5,7 @@ import { ScrollReveal } from "@/components/animations/SpatialSystem";
 import { Calendar, MapPin, ChevronRight, ScanLine, Stamp } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { useMyPassesQuery } from "@/lib/chain/hooks";
+import { useListings, useMyPassesQuery } from "@/lib/chain/hooks";
 import { useNearWallet } from "@/providers/NearWalletProvider";
 import { explainChainError } from "@/lib/chain/errors";
 import type { Pass } from "@/types/pass";
@@ -13,6 +13,8 @@ import type { Pass } from "@/types/pass";
 export default function MyPassesPage() {
   const { accountId, isReady, signIn } = useNearWallet();
   const { data: passes, isLoading, error, refetch } = useMyPassesQuery();
+  const listings = useListings();
+  const listedIds = new Set((listings.data ?? []).map((l) => l.pass_id));
 
   if (!isReady) return <div className="min-h-[50vh]" />;
 
@@ -55,6 +57,7 @@ export default function MyPassesPage() {
         hint="Tunjukkan QR di pintu masuk. Setelah discan, pass jadi lencana."
         icon={<ScanLine className="w-5 h-5 text-accent-ink" />}
         passes={active}
+        listedIds={listedIds}
         empty="Belum ada pass aktif."
         emptyAction
       />
@@ -63,6 +66,7 @@ export default function MyPassesPage() {
         hint="Setiap lencana adalah stempel di paspormu."
         icon={<Stamp className="w-5 h-5 text-accent-coral" />}
         passes={badges}
+        listedIds={listedIds}
         empty="Lencana pertamamu muncul setelah pass discan di pintu masuk."
       />
     </div>
@@ -74,6 +78,7 @@ function Group({
   hint,
   icon,
   passes,
+  listedIds,
   empty,
   emptyAction,
 }: {
@@ -81,6 +86,7 @@ function Group({
   hint: string;
   icon: React.ReactNode;
   passes: Pass[];
+  listedIds: Set<string>;
   empty: string;
   emptyAction?: boolean;
 }) {
@@ -107,7 +113,7 @@ function Group({
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
           {passes.map((p, i) => (
             <ScrollReveal key={p.id} delay={i * 0.05}>
-              <PassCard pass={p} />
+              <PassCard pass={p} listed={listedIds.has(p.id)} />
             </ScrollReveal>
           ))}
         </div>
@@ -116,7 +122,7 @@ function Group({
   );
 }
 
-function PassCard({ pass }: { pass: Pass }) {
+function PassCard({ pass, listed }: { pass: Pass; listed: boolean }) {
   const isBadge = pass.status === "USED";
   return (
     <Link
@@ -137,6 +143,9 @@ function PassCard({ pass }: { pass: Pass }) {
         >
           {isBadge ? "Lencana" : "Pass aktif"}
         </span>
+        {listed && (
+          <span className="absolute top-4 right-4 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-primary text-on-primary">Dijual</span>
+        )}
         {isBadge && (
           <div className="absolute bottom-4 right-4 stamp w-16 h-16 flex items-center justify-center bg-background/80 text-[10px] font-black uppercase text-center leading-tight">
             +{pass.stamps}

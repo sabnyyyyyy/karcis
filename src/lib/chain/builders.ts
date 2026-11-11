@@ -203,6 +203,88 @@ export const settleCampaignTx = (eventId: string): PreparedTx =>
 export const claimUnclaimedTx = (): PreparedTx =>
   contractTx("claim_unclaimed", {}, "Ambil hadiah", { gasTgas: GAS.claim });
 
+// ------------------------------------------------------------------ pasar tiket (jual ulang)
+
+/** Pasang pass di pasar tiket. Deposit 0,01 NEAR menutup penyimpanan listing; kelebihannya dikembalikan. */
+export const listPassTx = (passId: string, priceUnits: number | string): PreparedTx =>
+  contractTx("list_pass_for_resale", { pass_id: passId, price: String(priceUnits) }, "Jual pass", {
+    deposit: nearToYocto("0.01"),
+  });
+
+export const cancelResaleTx = (passId: string): PreparedTx =>
+  contractTx("cancel_resale", { pass_id: passId }, "Batalkan penjualan");
+
+/** Beli pass dari pasar tiket: pass lama di-burn, pembeli menerima pass baru */
+export const buyResaleTx = (p: { passId: string; amountUnits: number | string }): PreparedTx => ({
+  receiverId: CHAIN.stableToken,
+  methodName: "ft_transfer_call",
+  args: {
+    receiver_id: CHAIN.contractId,
+    amount: String(p.amountUnits),
+    msg: JSON.stringify({ action: "buy_resale", pass_id: p.passId }),
+  },
+  gasTgas: GAS.payToken,
+  depositYocto: ONE_YOCTO,
+  label: "Beli pass dari pasar tiket",
+});
+
+// ------------------------------------------------------------------ penyelenggara (registri on-chain)
+
+export interface OrganizerProfileInput {
+  name: string;
+  orgType: string;
+  city: string;
+  contact: string;
+  description: string;
+}
+
+/** Daftar sebagai penyelenggara. Deposit 0,02 NEAR menutup penyimpanan; kelebihannya dikembalikan. */
+export const registerOrganizerTx = (p: OrganizerProfileInput): PreparedTx =>
+  contractTx(
+    "register_organizer",
+    {
+      profile: {
+        name: p.name.trim(),
+        org_type: p.orgType,
+        city: p.city.trim(),
+        contact: p.contact.trim(),
+        description: p.description.trim(),
+      },
+    },
+    "Daftar sebagai penyelenggara",
+    { deposit: nearToYocto("0.02") }
+  );
+
+/** Ubah profil on-chain (mis. pindah kota); nilai lama tercatat di riwayat */
+export const updateOrganizerProfileTx = (p: OrganizerProfileInput): PreparedTx =>
+  contractTx(
+    "update_organizer_profile",
+    {
+      profile: {
+        name: p.name.trim(),
+        org_type: p.orgType,
+        city: p.city.trim(),
+        contact: p.contact.trim(),
+        description: p.description.trim(),
+      },
+    },
+    "Ubah profil penyelenggara",
+    { deposit: nearToYocto("0.01") }
+  );
+
+export const reportOrganizerTx = (organizer: string, reason: string): PreparedTx =>
+  contractTx("report_organizer", { organizer, reason: reason.trim() }, "Laporkan penyelenggara", {
+    deposit: nearToYocto("0.01"),
+  });
+
+/** Tindakan admin; masing-masing butuh deposit penyimpanan kecil untuk catatannya */
+export const suspendOrganizerTx = (organizer: string, reason: string): PreparedTx =>
+  contractTx("suspend_organizer", { organizer, reason: reason.trim() }, "Tangguhkan penyelenggara", { deposit: nearToYocto("0.01") });
+export const banOrganizerTx = (organizer: string, reason: string): PreparedTx =>
+  contractTx("ban_organizer", { organizer, reason: reason.trim() }, "Blokir penyelenggara", { deposit: nearToYocto("0.01") });
+export const reinstateOrganizerTx = (organizer: string, reason: string): PreparedTx =>
+  contractTx("reinstate_organizer", { organizer, reason: reason.trim() }, "Pulihkan penyelenggara", { deposit: nearToYocto("0.01") });
+
 // ------------------------------------------------------------------ voting
 
 export const createPollTx = (question: string, options: string[]): PreparedTx =>

@@ -22,6 +22,7 @@ import { useNearWallet } from "@/providers/NearWalletProvider";
 import { CHAIN, accountUrl } from "@/lib/chain/config";
 import { shortAccount } from "@/lib/chain/format";
 import { buildPassPayload } from "@/lib/passQr";
+import { ResalePanel } from "@/components/resale/ResalePanel";
 import { levelFor, levelReachedBy, nextLevel, totalStamps } from "@/lib/passport";
 import { LevelLadder } from "@/components/passport/LevelLadder";
 import type { Pass } from "@/types/pass";
@@ -48,7 +49,7 @@ export default function PassDetailPage() {
         </div>
         <div className="space-y-2">
           <h1 className="font-bodoni text-3xl font-black">Pass tidak ditemukan</h1>
-          <p className="text-text-muted text-sm max-w-xs mx-auto">Tidak ada pass dengan ID ini di kontrak.</p>
+          <p className="text-text-muted text-sm max-w-xs mx-auto">Tidak ada pass dengan ID ini di kontrak. Kalau pass ini tadinya kamu jual, ia sudah dihapus (burn) setelah terjual.</p>
         </div>
         <button
           onClick={() => router.push("/dashboard/tickets")}
@@ -102,7 +103,10 @@ export default function PassDetailPage() {
 
       <ScrollReveal>
         {pass.status === "VALID" ? (
-          <TicketView pass={pass} />
+          <div className="space-y-8">
+            <TicketView pass={pass} />
+            <ResalePanel pass={pass} />
+          </div>
         ) : (
           <BadgeView pass={pass} stamps={stamps} passes={myPasses} />
         )}

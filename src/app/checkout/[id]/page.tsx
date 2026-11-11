@@ -9,6 +9,7 @@ import { useNearWallet } from "@/providers/NearWalletProvider";
 import {
   useChainEvent,
   useMyPassesQuery,
+  useOrganizer,
   useQuote,
   useTokenBalance,
   useTokenRegistered,
@@ -47,6 +48,7 @@ function Checkout() {
   const balance = useTokenBalance(accountId);
   const registered = useTokenRegistered(accountId);
   const myPasses = useMyPassesQuery();
+  const organizer = useOrganizer(event?.ownerAccount);
 
   const [referrer, setReferrer] = useState<string | null>(null);
   const [phase, setPhase] = useState<"idle" | "sending" | "done">("idle");
@@ -109,7 +111,8 @@ function Checkout() {
   const ended = isEnded(event);
   const soldOut = isSoldOut(event);
   const needsFunding = !!event.campaign && !event.campaign.funded && !isFree;
-  const blocked = ended || soldOut || needsFunding;
+  const suspended = !!organizer.data && organizer.data.status !== "ACTIVE";
+  const blocked = ended || soldOut || needsFunding || suspended;
   const validRef = referrer && referrer !== accountId ? referrer : null;
   const success = phase === "done" || (returnedFromWallet && !!newPass);
 
@@ -270,7 +273,7 @@ function Checkout() {
 
               {blocked && (
                 <p className="text-accent-coral font-semibold">
-                  {ended ? "Event sudah selesai, penjualan ditutup." : soldOut ? "Tiket sudah habis." : "Penyelenggara belum menyetor dana kampanye."}
+                  {ended ? "Event sudah selesai, penjualan ditutup." : soldOut ? "Tiket sudah habis." : suspended ? "Penjualan dihentikan: penyelenggara ini sedang ditangguhkan." : "Penyelenggara belum menyetor dana kampanye."}
                 </p>
               )}
 

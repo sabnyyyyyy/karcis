@@ -52,8 +52,41 @@ fn ctx(who: AccountId, deposit: u128) {
     ctx_at(who, deposit, NOW);
 }
 
+fn admin() -> AccountId {
+    verifier()
+}
+
+fn org_profile(name: &str) -> OrganizerProfile {
+    OrganizerProfile {
+        name: name.into(),
+        org_type: "Kolektif".into(),
+        city: "Bandung".into(),
+        contact: "@gelombangpendek".into(),
+        description: "Kolektif musik lokal.".into(),
+    }
+}
+
+fn register(c: &mut Contract, who: AccountId) {
+    ctx(who, ONE_NEAR / 10);
+    c.register_organizer(org_profile("Kolektif Gelombang Pendek"));
+}
+
+/// Kontrak baru dengan owner() dan other_org() sudah terdaftar sebagai penyelenggara.
+/// Konteks (pemanggil, deposit, waktu) dikembalikan seperti sebelum dipanggil.
 fn new_contract() -> Contract {
+    let who = env::predecessor_account_id();
+    let deposit = env::attached_deposit().as_yoctonear();
+    let ts = env::block_timestamp();
     // testing_env! membawa storage lintas pemanggilan: kosongkan supaya kontrak baru benar-benar baru
+    let _ = near_sdk::mock::with_mocked_blockchain(|b| b.take_storage());
+    let mut c = Contract::new(token(), treasury(), verifier(), U128(500_000));
+    register(&mut c, owner());
+    register(&mut c, other_org());
+    ctx_at(who, deposit, ts);
+    c
+}
+
+fn bare_contract() -> Contract {
     let _ = near_sdk::mock::with_mocked_blockchain(|b| b.take_storage());
     Contract::new(token(), treasury(), verifier(), U128(500_000))
 }
@@ -1023,7 +1056,7 @@ fn double_vote_is_rejected() {
 }
 
 #[test]
-#[should_panic(expected = "Hanya penyelenggara yang bisa membuat voting")]
+#[should_panic(expected = "Daftar sebagai penyelenggara dulu")]
 fn only_organizer_creates_poll() {
     let mut c = setup(1, 10 * USD);
     ctx(stranger(), ONE_NEAR);
@@ -1361,4 +1394,617 @@ fn without_badge_image_media_stays_the_event_image() {
     ctx(owner(), 0);
     c.check_in(p.id.clone());
     assert_eq!(c.nft_token(p.id).unwrap().metadata.media.unwrap(), "https://example.com/a.jpg");
+}
+
+// ------------------------------------------------------------------
+// Registri penyelenggara
+// ------------------------------------------------------------------
+
+#[test]
+fn register_organizer_stores_profile_on_chain() {
+    let mut c = bare_contract();
+    ctx_at(buyer(), ONE_NEAR / 10, NOW);
+    let v = c.register_organizer(org_profile("  Basement Kolektif "));
+    assert_eq!(v.profile.name, "Basement Kolektif");
+    assert_eq!(v.profile.org_type, "kolektif");
+    assert_eq!(v.status, OrganizerStatus::Active);
+    assert_eq!(v.registered_at.0, NOW);
+    let got = c.get_organizer(buyer()).unwrap();
+    assert_eq!(got.profile.contact, "@gelombangpendek");
+    assert_eq!(got.reports, 0);
+    assert!(c.is_organizer(buyer()));
+    assert_eq!(c.organizers_count(), 1);
+    assert_eq!(c.get_organizers(0, 10).len(), 1);
+    assert!(c.get_organizer(stranger()).is_none());
+}
+
+#[test]
+#[should_panic(expected = "sudah terdaftar")]
+fn register_organizer_twice_is_rejected() {
+    let mut c = bare_contract();
+    register(&mut c, buyer());
+    register(&mut c, buyer());
+}
+
+#[test]
+#[should_panic(expected = "Kontak wajib diisi")]
+fn register_organizer_requires_contact() {
+    let mut c = bare_contract();
+    ctx(buyer(), ONE_NEAR / 10);
+    let mut p = org_profile("Basement Kolektif");
+    p.contact = "  ".into();
+    c.register_organizer(p);
+}
+
+#[test]
+#[should_panic(expected = "Nama penyelenggara minimal 2 karakter")]
+fn register_organizer_requires_name() {
+    let mut c = bare_contract();
+    ctx(buyer(), ONE_NEAR / 10);
+    c.register_organizer(org_profile("A"));
+}
+
+#[test]
+#[should_panic(expected = "Deposit penyimpanan kurang")]
+fn register_organizer_requires_storage_deposit() {
+    let mut c = bare_contract();
+    ctx(buyer(), 0);
+    c.register_organizer(org_profile("Basement Kolektif"));
+}
+
+#[test]
+#[should_panic(expected = "Daftar sebagai penyelenggara dulu")]
+fn create_event_requires_registration() {
+    let mut c = bare_contract();
+    ctx(buyer(), ONE_NEAR);
+    c.create_event(sample_event(1, USD, FeeBearer::Seller, None, 10));
+}
+
+#[test]
+fn suspend_blocks_new_events_polls_and_sales_until_reinstated() {
+    let mut c = setup(1, 10 * USD);
+    // satu pembelian sebelum ditangguhkan
+    let p = buy(&mut c, buyer());
+
+    ctx(admin(), ONE_NEAR / 100);
+    c.suspend_organizer(owner(), "Laporan penipuan dari beberapa pembeli".into());
+    let v = c.get_organizer(owner()).unwrap();
+    assert_eq!(v.status, OrganizerStatus::Suspended);
+    assert_eq!(v.cases.len(), 1);
+    assert_eq!(v.cases[0].kind, CaseKind::Suspend);
+    assert_eq!(v.cases[0].by, admin());
+    assert!(!c.is_organizer(owner()));
+
+    // check-in pembeli yang sudah bayar tetap boleh saat ditangguhkan
+    ctx(owner(), 0);
+    let used = c.check_in(p.id);
+    assert_eq!(used.status, PassStatus::Used);
+
+    // dipulihkan: semuanya jalan lagi
+    ctx(admin(), ONE_NEAR / 100);
+    c.reinstate_organizer(owner(), "Sudah diselesaikan dengan pembeli".into());
+    assert_eq!(c.get_organizer(owner()).unwrap().status, OrganizerStatus::Active);
+    assert_eq!(c.get_organizer(owner()).unwrap().cases.len(), 2);
+    let again = buy(&mut c, stranger());
+    assert_eq!(again.serial, 2);
+}
+
+#[test]
+#[should_panic(expected = "sedang ditangguhkan")]
+fn suspended_organizer_cannot_create_event() {
+    let mut c = setup(1, USD);
+    ctx(admin(), ONE_NEAR / 100);
+    c.suspend_organizer(owner(), "Sedang diselidiki".into());
+    let mut ev = sample_event(1, USD, FeeBearer::Seller, None, 10);
+    ev.code = "BARU01".into();
+    ctx(owner(), ONE_NEAR);
+    c.create_event(ev);
+}
+
+#[test]
+#[should_panic(expected = "sedang ditangguhkan")]
+fn suspended_organizer_cannot_create_poll() {
+    let mut c = setup(1, USD);
+    ctx(admin(), ONE_NEAR / 100);
+    c.suspend_organizer(owner(), "Sedang diselidiki".into());
+    ctx(owner(), ONE_NEAR / 10);
+    c.create_poll("Q?".into(), vec!["A".into(), "B".into()]);
+}
+
+#[test]
+#[should_panic(expected = "Penjualan dihentikan")]
+fn suspended_organizer_paid_sales_are_stopped() {
+    let mut c = setup(1, 10 * USD);
+    ctx(admin(), ONE_NEAR / 100);
+    c.suspend_organizer(owner(), "Sedang diselidiki".into());
+    let _ = buy(&mut c, buyer());
+}
+
+#[test]
+#[should_panic(expected = "Penjualan dihentikan")]
+fn suspended_organizer_free_passes_are_stopped() {
+    let mut c = setup(1, 10 * USD);
+    ctx(admin(), ONE_NEAR / 100);
+    c.suspend_organizer(owner(), "Sedang diselidiki".into());
+    ctx(buyer(), ONE_NEAR / 100);
+    c.mint_free_pass("1".into(), "gratis".into());
+}
+
+#[test]
+#[should_panic(expected = "diblokir, check-in ditolak")]
+fn banned_organizer_check_in_is_rejected() {
+    let mut c = setup(1, 10 * USD);
+    let p = buy(&mut c, buyer());
+    ctx(admin(), ONE_NEAR / 100);
+    c.ban_organizer(owner(), "Terbukti menipu".into());
+    assert_eq!(c.get_organizer(owner()).unwrap().status, OrganizerStatus::Banned);
+    ctx(owner(), 0);
+    c.check_in(p.id);
+}
+
+#[test]
+#[should_panic(expected = "Hanya admin")]
+fn only_admin_can_suspend() {
+    let mut c = setup(1, USD);
+    ctx(stranger(), ONE_NEAR / 100);
+    c.suspend_organizer(owner(), "Coba-coba menangguhkan".into());
+}
+
+#[test]
+#[should_panic(expected = "Alasan wajib diisi")]
+fn admin_action_requires_reason() {
+    let mut c = setup(1, USD);
+    ctx(admin(), ONE_NEAR / 100);
+    c.suspend_organizer(owner(), "  ".into());
+}
+
+#[test]
+#[should_panic(expected = "Hanya penyelenggara aktif yang bisa ditangguhkan")]
+fn cannot_suspend_twice() {
+    let mut c = setup(1, USD);
+    ctx(admin(), ONE_NEAR / 100);
+    c.suspend_organizer(owner(), "Sedang diselidiki".into());
+    c.suspend_organizer(owner(), "Sekali lagi".into());
+}
+
+#[test]
+fn admin_can_be_handed_over() {
+    let mut c = setup(1, USD);
+    ctx(admin(), 0);
+    c.set_admin(stranger());
+    assert_eq!(c.get_admin(), stranger());
+    ctx(stranger(), ONE_NEAR / 100);
+    c.suspend_organizer(owner(), "Admin baru menangguhkan".into());
+    assert_eq!(c.get_organizer(owner()).unwrap().status, OrganizerStatus::Suspended);
+}
+
+#[test]
+fn buyer_with_pass_can_report_once() {
+    let mut c = setup(1, 10 * USD);
+    let _ = buy(&mut c, buyer());
+    ctx(buyer(), ONE_NEAR / 100);
+    c.report_organizer(owner(), "Acara tidak sesuai deskripsi dan tidak ada refund".into());
+    let v = c.get_organizer(owner()).unwrap();
+    assert_eq!(v.reports, 1);
+    assert_eq!(v.cases[0].kind, CaseKind::Report);
+    assert_eq!(v.cases[0].by, buyer());
+    // laporan tidak menangguhkan otomatis
+    assert_eq!(v.status, OrganizerStatus::Active);
+}
+
+#[test]
+#[should_panic(expected = "sudah melaporkan")]
+fn duplicate_report_is_rejected() {
+    let mut c = setup(1, 10 * USD);
+    let _ = buy(&mut c, buyer());
+    ctx(buyer(), ONE_NEAR / 100);
+    c.report_organizer(owner(), "Acara tidak sesuai deskripsi dan tidak ada refund".into());
+    ctx(buyer(), ONE_NEAR / 100);
+    c.report_organizer(owner(), "Laporan kedua dengan alasan yang sama".into());
+}
+
+#[test]
+#[should_panic(expected = "Hanya pemegang pass")]
+fn report_requires_a_pass_from_that_organizer() {
+    let mut c = setup(1, 10 * USD);
+    ctx(stranger(), ONE_NEAR / 100);
+    c.report_organizer(owner(), "Saya tidak pernah datang tapi melapor".into());
+}
+
+#[test]
+#[should_panic(expected = "Hanya pemegang pass")]
+fn pass_from_another_organizer_does_not_allow_report() {
+    let mut c = setup(1, 10 * USD);
+    let _ = buy(&mut c, buyer());
+    ctx(buyer(), ONE_NEAR / 100);
+    c.report_organizer(other_org(), "Saya hanya punya pass dari penyelenggara lain".into());
+}
+
+#[test]
+#[should_panic(expected = "Alasan laporan minimal 10 karakter")]
+fn report_needs_a_real_reason() {
+    let mut c = setup(1, 10 * USD);
+    let _ = buy(&mut c, buyer());
+    ctx(buyer(), ONE_NEAR / 100);
+    c.report_organizer(owner(), "buruk".into());
+}
+
+#[test]
+fn migrate_keeps_all_data_and_adds_empty_market() {
+    // kontrak dengan satu event, satu pass, dan organizer terdaftar (layout V2)
+    let mut donor = setup(1, 10 * USD);
+    let p = buy(&mut donor, buyer());
+    let ev = donor.get_event("1".into()).unwrap();
+    let pass = donor.get_pass(p.id.clone()).unwrap();
+    let org = donor.organizers.get(&owner()).unwrap().clone();
+
+    let _ = near_sdk::mock::with_mocked_blockchain(|b| b.take_storage());
+    let me: AccountId = "pass.testnet".parse().unwrap();
+    testing_env!(VMContextBuilder::new()
+        .current_account_id(me.clone())
+        .predecessor_account_id(me.clone())
+        .block_timestamp(NOW)
+        .build());
+
+    let mut events: IterableMap<String, Event> = IterableMap::new(StorageKey::Events);
+    events.insert("1".into(), ev);
+    events.flush();
+    let mut passes: LookupMap<String, Pass> = LookupMap::new(StorageKey::Passes);
+    passes.insert(p.id.clone(), pass);
+    passes.flush();
+    let mut owner_passes: LookupMap<AccountId, Vec<String>> = LookupMap::new(StorageKey::OwnerPasses);
+    owner_passes.insert(buyer(), vec![p.id.clone()]);
+    owner_passes.flush();
+    let mut organizers: IterableMap<AccountId, OrganizerRecord> = IterableMap::new(StorageKey::OrganizerRecords);
+    organizers.insert(owner(), org);
+    organizers.flush();
+    let old = ContractV2 {
+        events,
+        passes,
+        owner_passes,
+        organizers,
+        polls: IterableMap::new(StorageKey::Polls),
+        campaigns: LookupMap::new(StorageKey::Campaigns),
+        event_codes: LookupMap::new(StorageKey::EventCodes),
+        unclaimed: LookupMap::new(StorageKey::Unclaimed),
+        stable_token: token(),
+        treasury: treasury(),
+        verifier: verifier(),
+        admin: stranger(),
+        min_paid_price: 500_000,
+        next_event: 1,
+        next_pass: 1,
+        next_poll: 0,
+    };
+    env::state_write(&old);
+
+    let c = Contract::migrate();
+    assert_eq!(c.get_admin(), stranger());
+    assert!(c.get_event("1".into()).is_some());
+    assert_eq!(c.get_pass(p.id.clone()).unwrap().owner, buyer());
+    assert!(c.is_organizer(owner()));
+    assert_eq!(c.listings_count(), 0);
+    assert_eq!(c.nft_total_supply().0, 1);
+}
+
+#[test]
+fn organizer_can_move_city_and_history_keeps_the_old_value() {
+    let mut c = setup(1, USD);
+    ctx(owner(), ONE_NEAR / 100);
+    let mut p = org_profile("Kolektif Gelombang Pendek");
+    p.city = "Jakarta".into();
+    p.contact = "@gelombang.jkt".into();
+    let v = c.update_organizer_profile(p);
+    assert_eq!(v.profile.city, "Jakarta");
+    assert_eq!(v.profile.contact, "@gelombang.jkt");
+    // pindah kota bukan laporan dan tidak mengubah status
+    assert_eq!(v.reports, 0);
+    assert_eq!(v.status, OrganizerStatus::Active);
+    assert_eq!(v.cases.len(), 1);
+    assert_eq!(v.cases[0].kind, CaseKind::ProfileUpdate);
+    assert_eq!(v.cases[0].by, owner());
+    assert!(v.cases[0].reason.contains("kota: Bandung -> Jakarta"));
+    assert!(v.cases[0].reason.contains("kontak: @gelombangpendek -> @gelombang.jkt"));
+    // event yang sudah dibuat tidak berubah
+    assert_eq!(c.get_event("1".into()).unwrap().city, "Bandung");
+}
+
+#[test]
+#[should_panic(expected = "Tidak ada perubahan")]
+fn profile_update_requires_a_change() {
+    let mut c = setup(1, USD);
+    ctx(owner(), ONE_NEAR / 100);
+    c.update_organizer_profile(org_profile("Kolektif Gelombang Pendek"));
+}
+
+#[test]
+#[should_panic(expected = "Penyelenggara tidak terdaftar")]
+fn profile_update_requires_registration() {
+    let mut c = setup(1, USD);
+    ctx(stranger(), ONE_NEAR / 100);
+    let mut p = org_profile("Siapa Saja");
+    p.city = "Medan".into();
+    c.update_organizer_profile(p);
+}
+
+#[test]
+#[should_panic(expected = "diblokir tidak bisa mengubah profil")]
+fn banned_organizer_cannot_rewrite_profile() {
+    let mut c = setup(1, USD);
+    ctx(admin(), ONE_NEAR / 100);
+    c.ban_organizer(owner(), "Terbukti menipu".into());
+    ctx(owner(), ONE_NEAR / 100);
+    let mut p = org_profile("Nama Baru Biar Tidak Ketahuan");
+    p.city = "Surabaya".into();
+    c.update_organizer_profile(p);
+}
+
+#[test]
+fn suspended_organizer_can_update_profile_and_history_stays_ordered() {
+    let mut c = setup(1, USD);
+    ctx(admin(), ONE_NEAR / 100);
+    c.suspend_organizer(owner(), "Sedang diselidiki".into());
+    ctx(owner(), ONE_NEAR / 100);
+    let mut p = org_profile("Kolektif Gelombang Pendek");
+    p.city = "Yogyakarta".into();
+    let v = c.update_organizer_profile(p);
+    assert_eq!(v.status, OrganizerStatus::Suspended);
+    let kinds: Vec<CaseKind> = v.cases.iter().map(|x| x.kind).collect();
+    assert_eq!(kinds, vec![CaseKind::Suspend, CaseKind::ProfileUpdate]);
+}
+
+// ------------------------------------------------------------------
+// Pasar tiket (jual ulang): pass lama di-burn, pembeli dapat pass baru
+// ------------------------------------------------------------------
+
+fn resale_msg(pass_id: &str) -> String {
+    format!(r#"{{"action":"buy_resale","pass_id":"{pass_id}"}}"#)
+}
+
+/// Pass milik buyer() sudah terdaftar di pasar dengan harga 8 USD (harga asli 10 USD)
+fn listed() -> (Contract, Pass) {
+    let mut c = setup(1, 10 * USD);
+    let p = buy(&mut c, buyer());
+    ctx(buyer(), ONE_NEAR / 100);
+    c.list_pass_for_resale(p.id.clone(), U128(8 * USD));
+    (c, p)
+}
+
+#[test]
+fn listing_shows_price_fee_and_face_value() {
+    let (c, p) = listed();
+    let l = c.get_listing(p.id.clone()).unwrap();
+    assert_eq!(l.seller, buyer());
+    assert_eq!(l.price.0, 8 * USD);
+    assert_eq!(l.face_value.0, 10 * USD);
+    assert_eq!(l.platform_fee.0, 272_000); // 3,4% dari 8 USD
+    assert_eq!(l.seller_receives.0, 8 * USD - 272_000);
+    assert_eq!(c.listings_count(), 1);
+    assert_eq!(c.get_listings(0, 10).len(), 1);
+}
+
+#[test]
+fn buying_a_listing_burns_the_old_pass_and_mints_a_new_one() {
+    let (mut c, old) = listed();
+    let supply_before = c.nft_total_supply().0;
+    let unused = pay_msg(&mut c, stranger(), 8 * USD, resale_msg(&old.id));
+    assert_eq!(unused, 0);
+
+    // pass lama hilang dari penjual dan dari kontrak
+    assert!(c.get_pass(old.id.clone()).is_none());
+    assert!(c.nft_token(old.id.clone()).is_none());
+    assert!(c.passes_for_owner(buyer()).is_empty());
+    assert!(c.get_listing(old.id.clone()).is_none());
+    assert_eq!(c.listings_count(), 0);
+
+    // pembeli baru memegang pass baru dengan nomor urut di atas kapasitas
+    let fresh = last_pass(&c, stranger());
+    assert_ne!(fresh.id, old.id);
+    assert_eq!(fresh.id, "GIGS12-0501");
+    assert_eq!(fresh.serial, 501);
+    assert_eq!(fresh.status, PassStatus::Valid);
+    assert_eq!(fresh.tier_id, old.tier_id);
+    assert_eq!(fresh.stamps, old.stamps);
+    assert_eq!(fresh.event_id, old.event_id);
+
+    // kapasitas dan hitungan terjual tidak berubah; suplai NFT tetap (1 burn, 1 mint)
+    let e = c.get_event("1".into()).unwrap();
+    assert_eq!(e.sold, 1);
+    assert_eq!(c.nft_total_supply().0, supply_before);
+}
+
+#[test]
+fn resale_pays_seller_minus_platform_fee() {
+    let (mut c, old) = listed();
+    pay_msg(&mut c, stranger(), 8 * USD, resale_msg(&old.id));
+    let t = ft_transfers();
+    let to = |who: &str| t.iter().filter(|(r, _)| r == who).map(|(_, a)| *a).sum::<u128>();
+    assert_eq!(to(buyer().as_str()), 8 * USD - 272_000);
+    assert_eq!(to(treasury().as_str()), 272_000);
+    // seluruh pembayaran habis dibagi
+    assert_eq!(t.iter().map(|(_, a)| *a).sum::<u128>(), 8 * USD);
+}
+
+#[test]
+fn resale_overpayment_is_returned() {
+    let (mut c, old) = listed();
+    let unused = pay_msg(&mut c, stranger(), 11 * USD, resale_msg(&old.id));
+    assert_eq!(unused, 3 * USD);
+}
+
+#[test]
+fn multiple_resales_get_unique_serials() {
+    let (mut c, old) = listed();
+    pay_msg(&mut c, stranger(), 8 * USD, resale_msg(&old.id));
+    let first = last_pass(&c, stranger());
+    // pembeli kedua menjual lagi, pembeli ketiga membeli
+    ctx(stranger(), ONE_NEAR / 100);
+    c.list_pass_for_resale(first.id.clone(), U128(7 * USD));
+    pay_msg(&mut c, scanner(), 7 * USD, resale_msg(&first.id));
+    let second = last_pass(&c, scanner());
+    assert_eq!(first.id, "GIGS12-0501");
+    assert_eq!(second.id, "GIGS12-0502");
+    assert!(c.get_pass(first.id).is_none());
+}
+
+#[test]
+#[should_panic(expected = "tidak boleh melebihi harga asli")]
+fn resale_price_cannot_exceed_face_value() {
+    let mut c = setup(1, 10 * USD);
+    let p = buy(&mut c, buyer());
+    ctx(buyer(), ONE_NEAR / 100);
+    c.list_pass_for_resale(p.id, U128(10 * USD + 1));
+}
+
+#[test]
+fn resale_at_face_value_is_allowed() {
+    let mut c = setup(1, 10 * USD);
+    let p = buy(&mut c, buyer());
+    ctx(buyer(), ONE_NEAR / 100);
+    assert_eq!(c.list_pass_for_resale(p.id, U128(10 * USD)).price.0, 10 * USD);
+}
+
+#[test]
+#[should_panic(expected = "Hanya pemilik pass")]
+fn only_the_owner_can_list() {
+    let mut c = setup(1, 10 * USD);
+    let p = buy(&mut c, buyer());
+    ctx(stranger(), ONE_NEAR / 100);
+    c.list_pass_for_resale(p.id, U128(5 * USD));
+}
+
+#[test]
+#[should_panic(expected = "sudah dijual")]
+fn cannot_list_twice() {
+    let (mut c, p) = listed();
+    ctx(buyer(), ONE_NEAR / 100);
+    c.list_pass_for_resale(p.id, U128(7 * USD));
+}
+
+#[test]
+#[should_panic(expected = "Pass gratis tidak bisa dijual ulang")]
+fn free_passes_cannot_be_resold() {
+    let mut c = setup(1, 10 * USD);
+    ctx(buyer(), ONE_NEAR / 100);
+    let free = c.mint_free_pass("1".into(), "gratis".into());
+    ctx(buyer(), ONE_NEAR / 100);
+    c.list_pass_for_resale(free.id, U128(USD));
+}
+
+#[test]
+#[should_panic(expected = "di bawah harga minimum")]
+fn resale_price_has_a_floor() {
+    let mut c = setup(1, 10 * USD);
+    let p = buy(&mut c, buyer());
+    ctx(buyer(), ONE_NEAR / 100);
+    c.list_pass_for_resale(p.id, U128(1));
+}
+
+#[test]
+#[should_panic(expected = "sudah dipakai tidak bisa dijual")]
+fn used_pass_cannot_be_listed() {
+    let mut c = setup(1, 10 * USD);
+    let p = buy(&mut c, buyer());
+    ctx(owner(), 0);
+    c.check_in(p.id.clone());
+    ctx(buyer(), ONE_NEAR / 100);
+    c.list_pass_for_resale(p.id, U128(5 * USD));
+}
+
+#[test]
+#[should_panic(expected = "Deposit penyimpanan kurang")]
+fn listing_needs_a_storage_deposit() {
+    let mut c = setup(1, 10 * USD);
+    let p = buy(&mut c, buyer());
+    ctx(buyer(), 0);
+    c.list_pass_for_resale(p.id, U128(5 * USD));
+}
+
+#[test]
+fn seller_can_cancel_and_nobody_else() {
+    let (mut c, p) = listed();
+    ctx(buyer(), 0);
+    c.cancel_resale(p.id.clone());
+    assert!(c.get_listing(p.id.clone()).is_none());
+    // pass tetap milik penjual
+    assert_eq!(c.get_pass(p.id).unwrap().owner, buyer());
+}
+
+#[test]
+#[should_panic(expected = "Hanya penjual")]
+fn stranger_cannot_cancel_a_listing() {
+    let (mut c, p) = listed();
+    ctx(stranger(), 0);
+    c.cancel_resale(p.id);
+}
+
+#[test]
+#[should_panic(expected = "Pass ini tidak sedang dijual")]
+fn cancelled_listing_cannot_be_bought() {
+    let (mut c, p) = listed();
+    ctx(buyer(), 0);
+    c.cancel_resale(p.id.clone());
+    pay_msg(&mut c, stranger(), 8 * USD, resale_msg(&p.id));
+}
+
+#[test]
+#[should_panic(expected = "Pembayaran kurang dari harga jual")]
+fn underpaying_a_listing_is_rejected() {
+    let (mut c, p) = listed();
+    pay_msg(&mut c, stranger(), 8 * USD - 1, resale_msg(&p.id));
+}
+
+#[test]
+#[should_panic(expected = "Tidak bisa membeli pass sendiri")]
+fn seller_cannot_buy_own_listing() {
+    let (mut c, p) = listed();
+    pay_msg(&mut c, buyer(), 8 * USD, resale_msg(&p.id));
+}
+
+#[test]
+#[should_panic(expected = "Pass ini tidak sedang dijual")]
+fn checking_in_removes_the_listing() {
+    let (mut c, p) = listed();
+    ctx(owner(), 0);
+    c.check_in(p.id.clone());
+    assert!(c.get_listing(p.id.clone()).is_none());
+    pay_msg(&mut c, stranger(), 8 * USD, resale_msg(&p.id));
+}
+
+#[test]
+#[should_panic(expected = "Penjualan dihentikan")]
+fn suspended_organizer_stops_resale_purchases() {
+    let (mut c, p) = listed();
+    ctx(admin(), ONE_NEAR / 100);
+    c.suspend_organizer(owner(), "Sedang diselidiki".into());
+    pay_msg(&mut c, stranger(), 8 * USD, resale_msg(&p.id));
+}
+
+#[test]
+#[should_panic(expected = "Penjualan sudah ditutup")]
+fn resale_closes_when_the_event_ends() {
+    let (mut c, p) = listed();
+    ctx_at(token(), 0, ENDS + 1);
+    let _ = c.ft_on_transfer(stranger(), U128(8 * USD), resale_msg(&p.id));
+}
+
+#[test]
+#[should_panic(expected = "Event sudah selesai")]
+fn cannot_list_after_the_event_ends() {
+    let mut c = setup(1, 10 * USD);
+    let p = buy(&mut c, buyer());
+    ctx_at(buyer(), ONE_NEAR / 100, ENDS + 1);
+    c.list_pass_for_resale(p.id, U128(5 * USD));
+}
+
+#[test]
+fn new_pass_owner_can_check_in_and_gets_the_stamps() {
+    let (mut c, old) = listed();
+    pay_msg(&mut c, stranger(), 8 * USD, resale_msg(&old.id));
+    let fresh = last_pass(&c, stranger());
+    ctx(owner(), 0);
+    c.check_in(fresh.id.clone());
+    assert_eq!(c.stamps_of(stranger()), 1);
+    assert_eq!(c.stamps_of(buyer()), 0);
+    assert_eq!(c.get_event("1".into()).unwrap().checked_in, 1);
 }
