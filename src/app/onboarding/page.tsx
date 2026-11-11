@@ -1,0 +1,238 @@
+"use client";
+
+import React, { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowUpRight, Building2, User, Wallet, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useNearWallet } from "@/providers/NearWalletProvider";
+import { useAuthStore, type OrganizerType } from "@/store/useAuthStore";
+import { useHydrated } from "@/lib/useHydrated";
+
+const orgTypes: { id: OrganizerType; label: string }[] = [
+  { id: "komunitas", label: "Komunitas / kolektif" },
+  { id: "kampus", label: "Kampus / himpunan" },
+  { id: "individu", label: "Individu" },
+  { id: "agensi", label: "Agensi / EO" },
+];
+
+const field =
+  "w-full rounded-2xl border border-[#141414]/15 bg-white px-5 py-3.5 text-[15px] outline-none focus:border-[#9CFF1E] focus:ring-2 focus:ring-[#9CFF1E]/40 transition";
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={null}>
+      <Onboarding />
+    </Suspense>
+  );
+}
+
+function Onboarding() {
+  const router = useRouter();
+  const search = useSearchParams();
+  const hydrated = useHydrated();
+  const { accountId, isReady, signIn } = useNearWallet();
+  const profiles = useAuthStore((s) => s.profiles);
+  const saveProfile = useAuthStore((s) => s.saveProfile);
+  const addOrganizerRole = useAuthStore((s) => s.addOrganizerRole);
+
+  const existing = accountId ? profiles[accountId] : undefined;
+  const wantsOrganizer = search.get("role") === "organizer";
+
+  const [role, setRole] = useState<"buyer" | "organizer" | null>(wantsOrganizer ? "organizer" : null);
+  const [name, setName] = useState("");
+  const [org, setOrg] = useState({ orgName: "", orgType: "komunitas" as OrganizerType, city: "", contact: "", description: "" });
+
+  // Profil sudah ada & tidak sedang menambah peran: langsung ke dashboard
+  useEffect(() => {
+    if (!hydrated || !isReady) return;
+    if (existing && !(wantsOrganizer && !existing.roles.includes("organizer"))) {
+      router.replace(existing.activeRole === "organizer" ? "/organizer" : "/dashboard");
+    }
+  }, [hydrated, isReady, existing, wantsOrganizer, router]);
+
+  if (!hydrated || !isReady) return <div className="min-h-screen" />;
+
+  const finishBuyer = () => {
+    if (!accountId || name.trim().length < 2) return;
+    saveProfile({
+      accountId,
+      name: name.trim(),
+      roles: ["buyer"],
+      activeRole: "buyer",
+      createdAt: new Date().toISOString(),
+    });
+    router.push("/dashboard");
+  };
+
+  const finishOrganizer = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accountId) return;
+    const organizer = { ...org, orgName: org.orgName.trim() };
+    if (existing) {
+      addOrganizerRole(accountId, organizer);
+    } else {
+      saveProfile({
+        accountId,
+        name: name.trim() || organizer.orgName,
+        roles: ["buyer", "organizer"],
+        activeRole: "organizer",
+        organizer,
+        createdAt: new Date().toISOString(),
+      });
+    }
+    router.push("/organizer");
+  };
+
+  return (
+    <main data-nav-theme="light" className="relative min-h-screen bg-white text-[#141414] pt-32 pb-24 px-6 overflow-hidden">
+      <div className="absolute inset-0 lime-grid [mask-image:linear-gradient(180deg,#000,transparent_75%)] pointer-events-none" />
+      <div className="relative max-w-3xl mx-auto space-y-12">
+        {/* 1. Belum ada wallet */}
+        {!accountId && (
+          <div className="space-y-8">
+            <div className="space-y-4">
+              <h1 className="text-[40px] md:text-[56px] font-extrabold tracking-[-0.04em] leading-none">Hubungkan wallet dulu.</h1>
+              <p className="text-[17px] text-[#141414]/60 leading-relaxed max-w-xl">
+                Akun NEAR-mu adalah identitasmu di Karcis. Tidak perlu email, password, atau KTP. Pass dan lencanamu tersimpan di akun itu.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={signIn}
+                className="inline-flex items-center gap-4 px-8 py-4 rounded-full text-[15px] font-semibold text-[#141414] hover:shadow-[0_0_40px_rgba(156,255,30,0.6)] transition-shadow"
+                style={{ background: "linear-gradient(180deg, #C6FF6B 0%, #9CFF1E 100%)" }}
+              >
+                <Wallet className="w-4 h-4" /> Hubungkan NEAR wallet
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 2. Wallet tersambung, pilih peran */}
+        {accountId && role === null && (
+          <div className="space-y-10">
+            <div className="space-y-4">
+              <p className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#9CFF1E]/30 text-[12px] font-semibold">
+                <Check className="w-3.5 h-3.5" /> Tersambung:<span className="font-mono">{accountId}</span>
+              </p>
+              <h1 className="text-[40px] md:text-[56px] font-extrabold tracking-[-0.04em] leading-none">Kamu mau jadi apa?</h1>
+              <p className="text-[17px] text-[#141414]/60">Bisa ganti atau tambah peran kapan saja dari menu akun.</p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-5">
+              <button
+                onClick={() => setRole("buyer")}
+                className="group text-left rounded-[28px] p-8 min-h-[240px] flex flex-col justify-between bg-white border-2 border-[#141414]/10 hover:border-[#9CFF1E] hover:-translate-y-1 transition-all"
+              >
+                <User className="w-10 h-10" strokeWidth={1.5} />
+                <div className="space-y-2">
+                  <h2 className="text-[28px] font-semibold tracking-[-0.02em]">Pembeli</h2>
+                  <p className="text-[#141414]/60 leading-snug">Cari event, beli pass, kumpulkan stempel, dan buka akses komunitas.</p>
+                </div>
+              </button>
+              <button
+                onClick={() => setRole("organizer")}
+                className="group text-left rounded-[28px] p-8 min-h-[240px] flex flex-col justify-between hover:-translate-y-1 transition-all"
+                style={{ background: "#9CFF1E" }}
+              >
+                <Building2 className="w-10 h-10" strokeWidth={1.5} />
+                <div className="space-y-2">
+                  <h2 className="text-[28px] font-semibold tracking-[-0.02em]">Penyelenggara</h2>
+                  <p className="text-[#141414]/70 leading-snug">Buat event, scan pass di pintu masuk, dan jaga hubungan dengan pengunjungmu.</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 3a. Pembeli */}
+        {accountId && role === "buyer" && (
+          <div className="space-y-8 max-w-lg">
+            <div className="space-y-3">
+              <h1 className="text-[40px] md:text-[48px] font-extrabold tracking-[-0.04em] leading-none">Nama panggilanmu?</h1>
+              <p className="text-[#141414]/60">Cukup itu. Nama ini yang tampil di paspor dan obrolan komunitas.</p>
+            </div>
+            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Budi" className={field} />
+            <div className="flex items-center gap-4">
+              <button
+                onClick={finishBuyer}
+                disabled={name.trim().length < 2}
+                className="inline-flex items-center gap-4 px-8 py-3.5 rounded-full text-[15px] font-semibold text-[#141414] disabled:opacity-40 transition-shadow hover:shadow-[0_0_40px_rgba(156,255,30,0.6)]"
+                style={{ background: "linear-gradient(180deg, #C6FF6B 0%, #9CFF1E 100%)" }}
+              >
+                Masuk ke paspor <ArrowUpRight className="w-4 h-4" />
+              </button>
+              <button onClick={() => setRole(null)} className="text-sm text-[#141414]/50 hover:text-[#141414]">Kembali</button>
+            </div>
+          </div>
+        )}
+
+        {/* 3b. Penyelenggara */}
+        {accountId && role === "organizer" && (
+          <form onSubmit={finishOrganizer} className="space-y-8">
+            <div className="space-y-3">
+              <h1 className="text-[40px] md:text-[48px] font-extrabold tracking-[-0.04em] leading-none">Ceritakan komunitasmu.</h1>
+              <p className="text-[#141414]/60 max-w-xl">Data ini tampil di halaman event-mu. Tidak ada dokumen atau KYC yang diminta.</p>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-5">
+              {!existing && (
+                <label className="space-y-2 text-[13px] font-semibold sm:col-span-2">
+                  Nama panggilanmu
+                  <input required minLength={2} value={name} onChange={(e) => setName(e.target.value)} placeholder="Budi" className={cn(field, "font-normal")} />
+                </label>
+              )}
+              <label className="space-y-2 text-[13px] font-semibold sm:col-span-2">
+                Nama kolektif / penyelenggara
+                <input required minLength={2} value={org.orgName} onChange={(e) => setOrg({ ...org, orgName: e.target.value })} placeholder="Kolektif Gelombang Pendek" className={cn(field, "font-normal")} />
+              </label>
+
+              <div className="space-y-2 text-[13px] font-semibold sm:col-span-2">
+                Jenis
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {orgTypes.map((t) => (
+                    <button
+                      type="button"
+                      key={t.id}
+                      onClick={() => setOrg({ ...org, orgType: t.id })}
+                      className={cn(
+                        "px-3 py-3 rounded-2xl border text-[13px] font-medium transition-all",
+                        org.orgType === t.id ? "bg-[#9CFF1E] border-[#9CFF1E]" : "border-[#141414]/15 hover:border-[#141414]/40"
+                      )}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <label className="space-y-2 text-[13px] font-semibold">
+                Kota
+                <input required value={org.city} onChange={(e) => setOrg({ ...org, city: e.target.value })} placeholder="Bandung" className={cn(field, "font-normal")} />
+              </label>
+              <label className="space-y-2 text-[13px] font-semibold">
+                Kontak (email atau Instagram)
+                <input required value={org.contact} onChange={(e) => setOrg({ ...org, contact: e.target.value })} placeholder="@gelombangpendek" className={cn(field, "font-normal")} />
+              </label>
+              <label className="space-y-2 text-[13px] font-semibold sm:col-span-2">
+                Tentang komunitasmu
+                <textarea required rows={4} value={org.description} onChange={(e) => setOrg({ ...org, description: e.target.value })} placeholder="Acara apa yang biasa kalian buat, dan untuk siapa?" className={cn(field, "font-normal resize-none")} />
+              </label>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <button
+                type="submit"
+                className="inline-flex items-center gap-4 px-8 py-3.5 rounded-full text-[15px] font-semibold text-[#141414] transition-shadow hover:shadow-[0_0_40px_rgba(156,255,30,0.6)]"
+                style={{ background: "linear-gradient(180deg, #C6FF6B 0%, #9CFF1E 100%)" }}
+              >
+                Buka panel penyelenggara <ArrowUpRight className="w-4 h-4" />
+              </button>
+              {!existing && <button type="button" onClick={() => setRole(null)} className="text-sm text-[#141414]/50 hover:text-[#141414]">Kembali</button>}
+            </div>
+          </form>
+        )}
+      </div>
+    </main>
+  );
+}

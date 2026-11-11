@@ -1,305 +1,356 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  CheckCircle2, 
-  CreditCard, 
-  QrCode, 
-  Building2, 
-  ShieldCheck, 
-  Lock,
-  Ticket,
-  Timer,
-  AlertCircle,
-  Info
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { cn } from "@/lib/utils";
-import { TrustScore } from "@/components/ui/trust-score";
+import { useParams, useSearchParams } from "next/navigation";
+import { CheckCircle2, Wallet, AlertCircle, Stamp, Loader2, ExternalLink, Coins } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useNearWallet } from "@/providers/NearWalletProvider";
+import {
+  useChainEvent,
+  useMyPassesQuery,
+  useQuote,
+  useTokenBalance,
+  useTokenRegistered,
+} from "@/lib/chain/hooks";
+import { fmtIdr, fmtUsdc, shortAccount, usdToUnits } from "@/lib/chain/format";
+import { explainChainError, readSuccessValue } from "@/lib/chain/errors";
+import {
+  buyPassTx,
+  canMintTestUsdc,
+  mintFreePassTx,
+  mintTestUsdcTx,
+  registerTokenTx,
+  type PreparedTx,
+} from "@/lib/chain/builders";
+import { CHAIN, txUrl } from "@/lib/chain/config";
+import { isEnded, isSoldOut } from "@/data/events";
 
-const steps = ["Attendee", "Payment", "Finalize"];
+const refKey = (eventId: string) => `karcis-ref-${eventId}`;
 
-export default function CheckoutPage({ params: _params }: { params: Promise<{ id: string }> }) {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
-  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
-  const searchParams = useSearchParams();
-  
-  const tierId = searchParams.get("tier");
-  const qty = parseInt(searchParams.get("qty") || "1");
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-background" />}>
+      <Checkout />
+    </Suspense>
+  );
+}
 
-  const tierName = tierId === "vip" ? "VIP ACCESS" : "STANDARD ACCESS";
-  const unitPrice = tierId === "vip" ? 3500000 : 1500000;
-  const subtotal = unitPrice * qty;
-  const fee = 5000;
-  const total = subtotal + fee;
+function Checkout() {
+  const params = useParams<{ id: string }>();
+  const search = useSearchParams();
+  const { data: event, isLoading } = useChainEvent(params.id);
+  const { accountId, isReady, signIn, sendTransactions } = useNearWallet();
 
+  const tier = event?.tiers.find((t) => t.id === search.get("tier")) ?? event?.tiers[0];
+  const quote = useQuote(event?.id, tier?.id);
+  const balance = useTokenBalance(accountId);
+  const registered = useTokenRegistered(accountId);
+  const myPasses = useMyPassesQuery();
+
+  const [referrer, setReferrer] = useState<string | null>(null);
+  const [phase, setPhase] = useState<"idle" | "sending" | "done">("idle");
+  const [message, setMessage] = useState<string | null>(null);
+  const [minting, setMinting] = useState(false);
+
+  // Pass yang sudah ada sebelum pembelian, untuk mengenali pass baru
+  const baseline = useRef<Set<string> | null>(null);
   useEffect(() => {
-    if (timeLeft <= 0 || currentStep === 2) return;
-    const timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
-    return () => clearInterval(timer);
-  }, [timeLeft, currentStep]);
+    if (!baseline.current && !myPasses.isLoading && accountId) {
+      baseline.current = new Set(myPasses.data.filter((p) => p.eventId === params.id).map((p) => p.id));
+    }
+  }, [myPasses.isLoading, myPasses.data, accountId, params.id]);
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  // Referral: dari ?ref= atau dari yang tersimpan saat membuka halaman event
+  useEffect(() => {
+    const fromUrl = search.get("ref");
+    let stored: string | null = null;
+    try {
+      stored = localStorage.getItem(refKey(params.id));
+    } catch {
+      // abaikan
+    }
+    setReferrer(fromUrl ?? stored);
+  }, [search, params.id]);
+
+  const returnedFromWallet = !!search.get("transactionHashes");
+  const txHash = search.get("transactionHashes")?.split(",").pop() ?? null;
+
+  const newPass = useMemo(() => {
+    if (!baseline.current) return null;
+    return myPasses.data.find((p) => p.eventId === params.id && !baseline.current!.has(p.id)) ?? null;
+  }, [myPasses.data, params.id]);
+
+  // Setelah kembali dari wallet (redirect), tunggu pass baru muncul
+  useEffect(() => {
+    if (!returnedFromWallet || newPass) return;
+    const t = setInterval(() => void myPasses.refetch(), 3000);
+    return () => clearInterval(t);
+  }, [returnedFromWallet, newPass, myPasses]);
+
+  if (isLoading || !isReady) return <main className="min-h-screen bg-background" />;
+
+  if (!event || !tier) {
+    return (
+      <main className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-6 text-center">
+        <h1 className="font-bodoni text-4xl font-black">Event tidak ditemukan.</h1>
+        <Link href="/events" className="px-8 py-3 bg-primary text-on-primary rounded-full text-xs font-bold uppercase tracking-widest">
+          Kembali ke daftar event
+        </Link>
+      </main>
+    );
+  }
+
+  const isFree = tier.price === 0;
+  const q = quote.data;
+  const total = q ? Number(q.total) : 0;
+  const have = balance.data ?? 0;
+  const enough = isFree || have >= total;
+  const ended = isEnded(event);
+  const soldOut = isSoldOut(event);
+  const needsFunding = !!event.campaign && !event.campaign.funded && !isFree;
+  const blocked = ended || soldOut || needsFunding;
+  const validRef = referrer && referrer !== accountId ? referrer : null;
+  const success = phase === "done" || (returnedFromWallet && !!newPass);
+
+  const pay = async () => {
+    if (!accountId) return signIn();
+    setPhase("sending");
+    setMessage(null);
+    try {
+      let txs: PreparedTx[];
+      if (isFree) {
+        txs = [mintFreePassTx(event.id, tier.id)];
+      } else {
+        txs = [];
+        if (registered.data === false) txs.push(registerTokenTx(accountId));
+        txs.push(buyPassTx({ eventId: event.id, tierId: tier.id, amountUnits: total, referrer: validRef }));
+      }
+      const outcome = await sendTransactions(txs, {
+        callbackUrl: `${window.location.origin}/checkout/${event.id}?tier=${tier.id}`,
+      });
+      // ft_transfer_call mengembalikan jumlah yang terpakai; "0" berarti kontrak menolak dan uang dikembalikan
+      const used = readSuccessValue(outcome);
+      if (!isFree && (used === "0" || used === 0)) {
+        setPhase("idle");
+        setMessage("Kontrak menolak pembelian ini dan pembayaranmu dikembalikan. Cek apakah tiket masih tersedia, lalu coba lagi.");
+        return;
+      }
+      await myPasses.refetch();
+      setPhase("done");
+    } catch (e) {
+      setPhase("idle");
+      setMessage(explainChainError(e));
+    }
   };
 
-  const handleNext = () => setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
-  const handleBack = () => setCurrentStep(prev => Math.max(prev - 1, 0));
+  const mintUsdc = async () => {
+    if (!accountId) return;
+    setMinting(true);
+    setMessage(null);
+    try {
+      const txs: PreparedTx[] = [];
+      if (registered.data === false) txs.push(registerTokenTx(accountId));
+      txs.push(mintTestUsdcTx(accountId, usdToUnits(100)));
+      await sendTransactions(txs, { callbackUrl: window.location.href });
+      await balance.refetch();
+    } catch (e) {
+      setMessage(explainChainError(e));
+    } finally {
+      setMinting(false);
+    }
+  };
 
   return (
-    <main className="min-h-screen bg-background text-primary flex flex-col pt-0 font-inter">
-      <div className="container-editorial py-32 max-w-[1440px] mx-auto">
-        
-        {/* Reservation Ticker */}
-        {currentStep < 2 && (
-          <div className="bg-accent text-black p-8 mb-20 flex items-center justify-between">
-            <div className="flex items-center space-x-6">
-              <div className="w-12 h-12 bg-black text-accent flex items-center justify-center">
-                <Timer className="w-6 h-6 animate-pulse" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-label uppercase tracking-widest font-black">Archive Reserved.</p>
-                <p className="text-label uppercase opacity-60">Selesaikan pembayaran sebelum waktu habis</p>
-              </div>
+    <main data-nav-theme="light" className="min-h-screen bg-background text-primary flex flex-col pt-0 font-inter">
+      <div className="px-6 md:px-12 py-32 max-w-[1100px] mx-auto w-full">
+        {success ? (
+          <div className="text-center py-10 space-y-10">
+            <div className="w-24 h-24 bg-accent text-[#141414] rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-12 h-12" />
             </div>
-            <div className="bg-black text-accent px-8 py-3 border border-black">
-              <span className="text-3xl font-bodoni italic tracking-tighter">{formatTime(timeLeft)}</span>
+            <div className="space-y-3">
+              <h1 className="font-bodoni text-5xl font-black tracking-tight">Pass-mu siap.</h1>
+              <p className="text-lg text-text-muted max-w-md mx-auto">
+                NFT pass sudah ada di walletmu. Tunjukkan QR-nya di pintu masuk, dan setelah discan ia jadi lencana permanen.
+              </p>
+            </div>
+
+            <div className="max-w-md mx-auto bg-surface-low border border-on-background/10 rounded-3xl p-8 space-y-5 text-left">
+              <Line label="ID pass" value={newPass?.id ?? "Memproses…"} mono />
+              <Line label="Event" value={event.title} />
+              <Line label="Pemilik" value={accountId ? shortAccount(accountId) : "-"} mono />
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold uppercase tracking-widest text-text-muted">Stempel</span>
+                <span className="stamp px-3 py-1 text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
+                  <Stamp className="w-3 h-3" /> +{event.stamps} setelah discan
+                </span>
+              </div>
+              {txHash && (
+                <a href={txUrl(txHash)} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-accent-ink underline underline-offset-4">
+                  Lihat transaksi <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href={newPass ? `/dashboard/tickets/${newPass.id}` : "/dashboard/tickets"}>
+                <Button className="h-14 px-10 bg-primary text-on-primary font-bold hover:bg-accent transition-all rounded-full">Lihat pass</Button>
+              </Link>
+              <Link href="/events">
+                <Button variant="outline" className="h-14 px-10 border border-on-background/20 text-primary font-bold rounded-full">
+                  Cari event lain
+                </Button>
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+            <div className="lg:col-span-7 space-y-10">
+              <div className="space-y-3">
+                <h1 className="font-bodoni text-4xl md:text-5xl font-black tracking-tight">Bayar &amp; terima pass</h1>
+                <p className="text-text-muted">
+                  Pembayaran memakai {CHAIN.stableSymbol} di NEAR {CHAIN.network}. Pass langsung dikirim ke walletmu sebagai NFT.
+                </p>
+              </div>
+
+              {/* Wallet */}
+              <div className="p-6 rounded-3xl border border-on-background/10 bg-surface-low space-y-4">
+                <div className="flex items-center gap-3">
+                  <Wallet className="w-5 h-5 text-accent-ink" />
+                  <p className="font-semibold">Wallet</p>
+                </div>
+                {accountId ? (
+                  <div className="space-y-2 text-sm">
+                    <p className="font-mono break-all">{accountId}</p>
+                    {!isFree && (
+                      <p className="text-text-muted">
+                        Saldo {CHAIN.stableSymbol}: <b className="text-primary">{fmtUsdc(have)}</b>
+                        {!enough && <span className="text-accent-coral"> (kurang {fmtUsdc(total - have)})</span>}
+                      </p>
+                    )}
+                    {!isFree && !enough && canMintTestUsdc() && (
+                      <button
+                        onClick={mintUsdc}
+                        disabled={minting}
+                        className="inline-flex items-center gap-2 mt-2 px-5 py-2.5 rounded-full border border-on-background/20 text-sm font-semibold hover:bg-accent hover:border-accent hover:text-[#141414] transition-colors disabled:opacity-50"
+                      >
+                        <Coins className="w-4 h-4" /> {minting ? "Menunggu wallet…" : "Cetak 100 USDC uji (testnet)"}
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-text-muted">Hubungkan NEAR wallet untuk melanjutkan.</p>
+                    <Button onClick={signIn} variant="lime" className="h-12 px-8">Hubungkan wallet</Button>
+                  </div>
+                )}
+              </div>
+
+              {validRef && !isFree && (
+                <p className="text-sm text-text-muted">
+                  Kamu membeli lewat link referral <span className="font-mono text-primary">{shortAccount(validRef)}</span>.
+                  Biayanya tidak berubah; clipper itu dapat hadiah dari dana kampanye.
+                </p>
+              )}
+
+              {message && (
+                <div className="p-5 rounded-2xl border border-accent-coral/30 bg-accent-coral/5 flex gap-3 text-sm">
+                  <AlertCircle className="w-5 h-5 text-accent-coral shrink-0" />
+                  <p>{message}</p>
+                </div>
+              )}
+
+              {returnedFromWallet && !newPass && (
+                <div className="p-5 rounded-2xl border border-accent/30 bg-accent/5 flex gap-3 text-sm items-center">
+                  <Loader2 className="w-5 h-5 animate-spin text-accent-ink" />
+                  <p>Transaksi terkirim. Menunggu pass tercatat di jaringan…</p>
+                </div>
+              )}
+
+              {blocked && (
+                <p className="text-accent-coral font-semibold">
+                  {ended ? "Event sudah selesai, penjualan ditutup." : soldOut ? "Tiket sudah habis." : "Penyelenggara belum menyetor dana kampanye."}
+                </p>
+              )}
+
+              <Button
+                onClick={pay}
+                disabled={phase === "sending" || blocked || (!!accountId && !enough) || quote.isLoading}
+                variant="lime"
+                size="lg"
+                className="w-full sm:w-auto"
+              >
+                {!accountId
+                  ? "Hubungkan wallet"
+                  : phase === "sending"
+                    ? "Menunggu wallet…"
+                    : isFree
+                      ? "Ambil pass gratis"
+                      : `Bayar ${q ? fmtUsdc(q.total) : ""}`}
+              </Button>
+              <p className="text-xs text-text-muted max-w-md">
+                {isFree
+                  ? "Pass gratis hanya butuh biaya penyimpanan sekitar 0,005 NEAR (kelebihan dikembalikan)."
+                  : "Wallet akan meminta persetujuan. Kalau kontrak menolak pembelian, token dikembalikan otomatis."}
+              </p>
+            </div>
+
+            {/* Ringkasan */}
+            <div className="lg:col-span-5">
+              <div className="sticky top-28 bg-surface-low border border-on-background/10 rounded-3xl p-8 space-y-7">
+                <h2 className="font-bodoni text-2xl font-black tracking-tight border-b border-on-background/10 pb-5">Ringkasan</h2>
+                <div className="space-y-4">
+                  {event.image && (
+                    <div className="aspect-video rounded-2xl overflow-hidden bg-background">
+                      <img src={event.image} alt={event.title} className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <div className="space-y-1">
+                    <p className="font-bodoni text-xl font-bold leading-tight">{event.title}</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-text-muted">{event.dateFull} · {event.city}</p>
+                    <p className="text-xs text-text-muted">Pass: {tier.name} · kode {event.code}</p>
+                  </div>
+                </div>
+
+                {isFree ? (
+                  <p className="text-sm font-semibold">Gratis</p>
+                ) : q ? (
+                  <div className="space-y-3 pt-5 border-t border-on-background/10 text-sm">
+                    <Line label="Harga tiket" value={fmtUsdc(q.price)} />
+                    {event.feeBearer === "BUYER" ? (
+                      <>
+                        <Line label="Biaya layanan (3,4%)" value={fmtUsdc(q.platform_fee)} />
+                        {Number(q.promo_fee) > 0 && <Line label="Biaya promosi" value={fmtUsdc(q.promo_fee)} />}
+                      </>
+                    ) : (
+                      <p className="text-xs text-text-muted">Biaya layanan ditanggung penyelenggara.</p>
+                    )}
+                    <div className="pt-4 border-t border-on-background/10 flex justify-between items-end">
+                      <span className="text-xs font-bold uppercase tracking-widest text-text-muted">Total</span>
+                      <span className="text-right">
+                        <span className="font-bodoni text-3xl font-black leading-none">{fmtUsdc(q.total)}</span>
+                        <span className="block text-xs text-text-muted mt-1">≈ {fmtIdr(q.total)} (perkiraan kurs)</span>
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-text-muted">Memuat rincian harga dari kontrak…</p>
+                )}
+              </div>
             </div>
           </div>
         )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-24">
-          
-          {/* Main Checkout Area */}
-          <div className="lg:col-span-8 space-y-16">
-            
-            {/* Steps Visual */}
-            <div className="flex items-center space-x-12 mb-12 border-b border-border-main pb-8">
-              {steps.map((step, i) => (
-                <div key={i} className="flex items-center space-x-4">
-                  <div className={cn(
-                    "w-10 h-10 border flex items-center justify-center text-label transition-all",
-                    currentStep === i ? "border-accent bg-accent text-black" : 
-                    currentStep > i ? "border-primary bg-primary text-black" : "border-border-main text-text-muted"
-                  )}>
-                    0{i + 1}
-                  </div>
-                  <span className={cn("text-label uppercase", currentStep >= i ? "text-primary" : "text-text-muted")}>{step}</span>
-                </div>
-              ))}
-            </div>
-
-            <AnimatePresence mode="wait">
-              
-              {/* Step 0: Attendee Details */}
-              {currentStep === 0 && (
-                <motion.div key="step0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
-                  <div className="space-y-4">
-                    <h2 className="text-4xl font-bodoni uppercase tracking-tight italic text-primary">Attendee / <br /> <span className="not-italic">Manifest.</span></h2>
-                    <p className="font-bodoni text-xl text-text-muted italic">E-ticket akan dikirimkan ke alamat email di bawah ini.</p>
-                  </div>
-                  
-                  <div className="bg-surface border border-border-main p-12 space-y-10">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                      <div className="space-y-4">
-                        <Label className="text-label text-text-muted">Full Name (ID)</Label>
-                        <Input placeholder="BUDI SANTOSO" className="h-16 bg-background border border-border-main rounded-none px-6 text-label focus:border-accent text-primary placeholder:text-text-muted" />
-                      </div>
-                      <div className="space-y-4">
-                        <Label className="text-label text-text-muted">Email Hash</Label>
-                        <Input type="email" placeholder="IDENTITY@ARCHIVE.COM" className="h-16 bg-background border border-border-main rounded-none px-6 text-label focus:border-accent text-primary placeholder:text-text-muted" />
-                      </div>
-                      <div className="space-y-4">
-                        <Label className="text-label text-text-muted">Contact Protocol</Label>
-                        <Input placeholder="0812XXXXXXXX" className="h-16 bg-background border border-border-main rounded-none px-6 text-label focus:border-accent text-primary" />
-                      </div>
-                      <div className="space-y-4">
-                        <Label className="text-label text-text-muted">Identity Number (NIK)</Label>
-                        <Input placeholder="320XXXXXXXXXXXXX" className="h-16 bg-background border border-border-main rounded-none px-6 text-label focus:border-accent text-primary" />
-                      </div>
-                    </div>
-                    
-                    <div className="p-8 border border-accent/20 bg-accent/5 flex items-start space-x-4">
-                      <AlertCircle className="w-5 h-5 text-accent mt-0.5 shrink-0" />
-                      <p className="text-label text-accent leading-relaxed uppercase tracking-wide">
-                        Pastikan data sesuai dengan kartu identitas. Kesalahan data dapat menghambat proses check-in.
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Step 1: Payment */}
-              {currentStep === 1 && (
-                <motion.div key="step1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
-                  <div className="space-y-4">
-                    <h2 className="text-4xl font-bodoni uppercase tracking-tight italic text-primary">Payment / <br /> <span className="not-italic">Settlement.</span></h2>
-                    <p className="font-bodoni text-xl text-text-muted italic">Semua pembayaran diproses secara aman dan instan.</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {[
-                      { id: "qris", name: "QRIS", icon: QrCode },
-                      { id: "gopay", name: "GOPAY", icon: QrCode },
-                      { id: "va", name: "BANK TRANSFER", icon: Building2 },
-                      { id: "cc", name: "CREDIT CARD", icon: CreditCard },
-                    ].map((method) => (
-                      <div 
-                        key={method.id}
-                        onClick={() => setPaymentMethod(method.id)}
-                        className={cn(
-                          "p-8 border-2 transition-all cursor-pointer flex items-center space-x-6 relative group",
-                          paymentMethod === method.id ? "border-accent bg-surface" : "border-border-main bg-background hover:border-text-muted"
-                        )}
-                      >
-                        <div className={cn(
-                          "w-12 h-12 flex items-center justify-center transition-colors",
-                          paymentMethod === method.id ? "bg-accent text-black" : "bg-surface text-text-muted"
-                        )}>
-                          <method.icon className="w-6 h-6" />
-                        </div>
-                        <span className="text-label font-black text-primary block">{method.name}</span>
-                        {paymentMethod === method.id && (
-                          <div className="absolute top-4 right-4 w-4 h-4 bg-accent" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Step 2: Success */}
-              {currentStep === 2 && (
-                <motion.div key="step2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 space-y-12">
-                  <div className="w-32 h-32 bg-primary text-black flex items-center justify-center mx-auto">
-                    <CheckCircle2 className="w-16 h-16" />
-                  </div>
-
-                  <div className="space-y-4">
-                    <h2 className="text-6xl font-bodoni italic tracking-tighter uppercase text-primary">Acquisition / <br /> <span className="not-italic">Success.</span></h2>
-                    <p className="font-bodoni text-2xl text-text-muted italic max-w-md mx-auto">Tiket Anda telah dikirim ke email dan tersedia di Dashboard.</p>
-                  </div>
-
-                  <div className="max-w-md mx-auto bg-surface border border-border-main p-12 space-y-10">
-                    <div className="space-y-1">
-                      <p className="text-label text-text-muted">TRANSACTION HASH</p>
-                      <p className="text-2xl font-bodoni italic text-accent tracking-widest">#STX-99021-JKT</p>
-                    </div>
-                    <div className="space-y-6 pt-10 border-t border-border-main text-left">
-                      <div className="flex justify-between items-center">
-                        <span className="text-label text-text-muted">EVENT</span>
-                        <span className="text-label text-primary">JAVA MUSIC FESTIVAL 2026</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-label text-text-muted">SETTLEMENT</span>
-                        <span className="font-bodoni text-2xl italic text-primary">IDR 1.505.000</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-12 flex flex-col sm:flex-row gap-8 justify-center">
-                    <Link href="/dashboard/tickets">
-                      <Button className="h-20 px-12 bg-primary text-black text-label italic hover:bg-accent transition-all rounded-none">
-                        View Vault
-                      </Button>
-                    </Link>
-                    <Link href="/events">
-                      <Button variant="outline" className="h-20 px-12 border border-border-main text-primary text-label italic hover:border-accent transition-all rounded-none">
-                        Discovery
-                      </Button>
-                    </Link>
-                  </div>
-                </motion.div>
-              )}
-
-            </AnimatePresence>
-
-            {/* Navigation Buttons */}
-            {currentStep < 2 && (
-              <div className="flex items-center justify-between pt-12 border-t border-border-main">
-                <button 
-                  onClick={handleBack} 
-                  disabled={currentStep === 0}
-                  className="text-label text-text-muted hover:text-primary transition-all disabled:opacity-0"
-                >
-                  PREVIOUS
-                </button>
-                <Button 
-                  onClick={handleNext} 
-                  disabled={currentStep === 1 && !paymentMethod}
-                  className="h-20 px-16 bg-primary text-black text-label italic hover:bg-accent transition-all rounded-none"
-                >
-                  {currentStep === 1 ? "FINALIZE ACQUISITION" : "NEXT PHASE"}
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Right: Order Summary */}
-          {currentStep < 2 && (
-            <div className="lg:col-span-4">
-              <div className="sticky top-40 space-y-12">
-                
-                <div className="bg-surface border border-border-main p-12 space-y-10">
-                  <h3 className="text-3xl font-bodoni italic tracking-tighter uppercase border-b border-border-main pb-6">Summary.</h3>
-                  
-                  <div className="space-y-6">
-                    <div className="aspect-video bg-background border border-border-main overflow-hidden">
-                      <img src="https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&q=80&w=600" alt="Event" className="w-full h-full object-cover img-cinematic" />
-                    </div>
-                    <div className="space-y-2">
-                      <p className="font-bodoni text-2xl text-primary italic uppercase leading-none">Java Music Festival 2026</p>
-                      <p className="text-label text-text-muted">15 JULY 2026 • JAKARTA, ID</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 pt-10 border-t border-border-main">
-                    <div className="flex justify-between items-center">
-                      <span className="text-label text-text-muted">UNIT ({qty}X)</span>
-                      <span className="text-label text-primary">{tierName}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-label text-text-muted">UNIT PRICE</span>
-                      <span className="text-label text-primary">IDR {unitPrice.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-label text-text-muted">PROTOCOL FEE</span>
-                      <span className="text-label text-primary">IDR {fee.toLocaleString()}</span>
-                    </div>
-                  </div>
-
-                  <div className="pt-10 border-t border-border-main flex justify-between items-end">
-                    <span className="text-label text-text-muted">TOTAL</span>
-                    <span className="font-bodoni text-4xl italic text-primary leading-none">IDR {total.toLocaleString()}</span>
-                  </div>
-                </div>
-
-                <div className="p-8 border border-border-main space-y-6">
-                  <div className="flex items-center space-x-4 text-accent">
-                    <ShieldCheck className="w-5 h-5" />
-                    <span className="text-label">SOLTIX GUARD ACTIVE</span>
-                  </div>
-                  <p className="font-bodoni text-lg text-text-muted italic leading-tight">
-                    Encrypted digital issuance ensures your access is absolute and unique.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-        </div>
       </div>
     </main>
+  );
+}
+
+function Line({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex justify-between items-center gap-4">
+      <span className="text-xs font-bold uppercase tracking-widest text-text-muted">{label}</span>
+      <span className={mono ? "font-mono text-sm break-all text-right" : "font-semibold text-right"}>{value}</span>
+    </div>
   );
 }

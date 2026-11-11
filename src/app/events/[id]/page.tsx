@@ -1,234 +1,377 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { EditorialFooter } from "@/components/layout/Footer";
 import { ScrollReveal } from "@/components/animations/SpatialSystem";
-import { 
-  MapPin, 
-  Calendar, 
-  Clock, 
-  Users, 
-  ShieldCheck, 
+import {
+  MapPin,
   ArrowLeft,
   Share2,
   Heart,
   ChevronRight,
   Music,
-  Info,
-  Ticket
+  Stamp,
+  Ticket,
+  ScanLine,
+  MessagesSquare,
+  Megaphone,
+  Copy,
+  Check,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { useSavedStore } from "@/store/useSavedStore";
+import { useHydrated } from "@/lib/useHydrated";
+import { useNearWallet } from "@/providers/NearWalletProvider";
+import { useCampaign, useChainEvent, useQuote } from "@/lib/chain/hooks";
+import { fmtIdr, fmtPrice, fmtUsdc } from "@/lib/chain/format";
+import { explainChainError } from "@/lib/chain/errors";
+import { joinCampaignTx } from "@/lib/chain/builders";
+import { isEnded, isSoldOut } from "@/data/events";
 
-// Mock Data
-const eventData = {
-  id: "1",
-  title: "The Ritual: Jakarta Echoes",
-  organizer: "Cultural Archive Society",
-  category: "Experimental Music",
-  date: "12 Aug 2026",
-  time: "19:00 - 02:00",
-  location: "SCBD District 8",
-  city: "Jakarta",
-  price: "850K",
-  trust: 98.4,
-  image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=2400",
-  description: "An immersive multi-sensory journey through the subterranean soundscapes of the capital city. This one-night architectural music experience brings together the leading voices in experimental Indonesian sound for a curated ceremony of rhythm and light.",
-  lineup: [
-    { name: "Diskoria", time: "22:00", role: "Headliner" },
-    { name: "Senyawa", time: "21:00", role: "Special Guest" },
-    { name: "Batavia Madrigal", time: "20:00", role: "Opening" }
-  ],
-  venue: {
-    name: "The Subterranean Hall",
-    address: "District 8, SCBD, Lot 28",
-    capacity: "1,200 Curators"
-  }
-};
+const refKey = (eventId: string) => `karcis-ref-${eventId}`;
 
 export default function EventDetailPage() {
-  const params = useParams();
-  const [isLiked, setIsLiked] = useState(false);
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-background" />}>
+      <EventDetail />
+    </Suspense>
+  );
+}
+
+function EventDetail() {
+  const params = useParams<{ id: string }>();
+  const search = useSearchParams();
+  const { data: event, isLoading, error } = useChainEvent(params.id);
+  const campaign = useCampaign(event?.campaign ? params.id : undefined);
+  const { accountId, signIn, sendTransactions } = useNearWallet();
+
+  const hydrated = useHydrated();
+  const savedIds = useSavedStore((s) => s.ids);
+  const toggleSaved = useSavedStore((s) => s.toggle);
+  const isLiked = hydrated && savedIds.includes(params.id);
+  const [tierId, setTierId] = useState<string | null>(null);
+  const [joining, setJoining] = useState(false);
+  const [joinMsg, setJoinMsg] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // Simpan kode referral dari ?ref= supaya terbawa ke checkout
+  const refParam = search.get("ref");
+  useEffect(() => {
+    if (!refParam) return;
+    try {
+      localStorage.setItem(refKey(params.id), refParam);
+    } catch {
+      // localStorage tidak tersedia
+    }
+  }, [refParam, params.id]);
+
+  const selectedTier = event?.tiers.find((t) => t.id === (tierId ?? event.tiers[0]?.id)) ?? event?.tiers[0];
+  const quote = useQuote(event?.id, selectedTier?.id);
+
+  if (isLoading) return <main className="min-h-screen bg-background" />;
+
+  if (error || !event) {
+    return (
+      <main className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-6 text-center">
+        <h1 className="font-bodoni text-4xl font-black">{error ? "Event belum bisa dimuat." : "Event tidak ditemukan."}</h1>
+        <p className="text-text-muted">{error ? explainChainError(error) : "Event ini mungkin tidak ada di kontrak."}</p>
+        <Link href="/events" className="px-8 py-3 bg-primary text-on-primary rounded-full text-xs font-bold uppercase tracking-widest">
+          Kembali ke daftar event
+        </Link>
+      </main>
+    );
+  }
+
+  const ended = isEnded(event);
+  const soldOut = isSoldOut(event);
+  const needsFunding = !!event.campaign && !event.campaign.funded;
+  const canBuy = !ended && !soldOut && !needsFunding;
+  const joined = !!accountId && !!campaign.data?.participants.includes(accountId);
+  const isOwner = accountId === event.ownerAccount;
+  const refLink = typeof window !== "undefined" && accountId ? `${window.location.origin}/events/${event.id}?ref=${accountId}` : "";
+  const checkoutHref = `/checkout/${event.id}?tier=${selectedTier?.id ?? ""}`;
+
+  const joinCampaign = async () => {
+    if (!accountId) return signIn();
+    setJoining(true);
+    setJoinMsg(null);
+    try {
+      await sendTransactions([joinCampaignTx(event.id)], { callbackUrl: window.location.href });
+      setJoinMsg("Kamu sudah ikut kampanye. Link referralmu siap.");
+      await campaign.refetch();
+    } catch (e) {
+      setJoinMsg(explainChainError(e));
+    } finally {
+      setJoining(false);
+    }
+  };
+
+  const copyRef = async () => {
+    try {
+      await navigator.clipboard.writeText(refLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // clipboard tidak tersedia
+    }
+  };
+
+  const q = quote.data;
 
   return (
     <main className="min-h-screen bg-background text-text-main font-inter transition-all duration-500">
-      
-      {/* 1. COMPACT HEADER */}
-      <section className="relative h-[50vh] md:h-[60vh] overflow-hidden">
-        <img src={eventData.image} className="w-full h-full object-cover" alt={eventData.title} />
+      {/* HEADER */}
+      <section className="relative h-[50vh] md:h-[60vh] overflow-hidden bg-surface-lowest">
+        {event.image && <img src={event.image} className="w-full h-full object-cover" alt={event.title} />}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/10 to-transparent" />
-        
+
         <div className="absolute top-24 left-6 md:left-12 z-10">
-           <Link href="/events">
-             <button className="flex items-center gap-2 px-5 py-2.5 bg-background/90 backdrop-blur-md border border-on-background/5 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-accent-teal hover:text-white transition-all">
-               <ArrowLeft className="w-3.5 h-3.5" /> Back to Archive
-             </button>
-           </Link>
+          <Link href="/events">
+            <button className="flex items-center gap-2 px-5 py-2.5 bg-background/90 backdrop-blur-md border border-on-background/5 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-accent hover:text-[#141414] transition-all">
+              <ArrowLeft className="w-3.5 h-3.5" /> Semua event
+            </button>
+          </Link>
         </div>
 
         <div className="absolute bottom-8 left-6 md:left-12 right-6 md:right-12 flex flex-col md:flex-row justify-between items-end gap-6">
-           <ScrollReveal>
-             <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Badge variant="teal" className="text-[9px] px-2 py-0.5">{eventData.category}</Badge>
-                  <div className="flex items-center gap-1.5 text-primary opacity-60">
-                    <ShieldCheck className="w-3.5 h-3.5 text-accent-mint" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Verified Society Access</span>
-                  </div>
-                </div>
-                <h1 className="text-4xl md:text-6xl font-black italic tracking-tight lowercase leading-none">{eventData.title}</h1>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-text-muted italic opacity-60">Organized by {eventData.organizer}</p>
-             </div>
-           </ScrollReveal>
+          <ScrollReveal>
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge variant="teal" className="text-[9px] px-2 py-0.5">{event.category}</Badge>
+                <span className="stamp px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest bg-background/70">
+                  +{event.stamps} stempel
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full bg-background/80 text-[10px] font-mono font-bold">{event.code}</span>
+              </div>
+              <h1 className="font-bodoni text-4xl md:text-6xl font-black tracking-tight leading-none">{event.title}</h1>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-text-muted">Diselenggarakan {event.organizer}</p>
+            </div>
+          </ScrollReveal>
 
-           <ScrollReveal delay={0.2}>
-             <div className="flex gap-3">
-                <button 
-                  onClick={() => setIsLiked(!isLiked)}
-                  className={cn("p-3.5 rounded-full border transition-all shadow-sm", isLiked ? "bg-accent-coral border-accent-coral text-white" : "bg-background/80 border-on-background/10 hover:border-accent-coral")}
-                >
-                  <Heart className={cn("w-5 h-5", isLiked && "fill-current")} />
-                </button>
-                <button className="p-3.5 rounded-full bg-background/80 border border-on-background/10 hover:border-accent-teal transition-all shadow-sm">
-                  <Share2 className="w-5 h-5" />
-                </button>
-             </div>
-           </ScrollReveal>
+          <ScrollReveal delay={0.2}>
+            <div className="flex gap-3">
+              <button
+                onClick={() => toggleSaved(params.id)}
+                aria-label="Simpan event"
+                className={cn("p-3.5 rounded-full border transition-all shadow-sm", isLiked ? "bg-accent-coral border-accent-coral text-white" : "bg-background/80 border-on-background/10 hover:border-accent-coral")}
+              >
+                <Heart className={cn("w-5 h-5", isLiked && "fill-current")} />
+              </button>
+              <button aria-label="Bagikan" className="p-3.5 rounded-full bg-background/80 border border-on-background/10 hover:border-accent transition-all shadow-sm">
+                <Share2 className="w-5 h-5" />
+              </button>
+            </div>
+          </ScrollReveal>
         </div>
       </section>
 
-      {/* 2. DENSE CONTENT GRID */}
+      {/* CONTENT */}
       <section className="container mx-auto px-6 md:px-12 py-16">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 md:gap-16">
-          
-          {/* LEFT: MAIN INFO */}
           <div className="lg:col-span-8 space-y-12">
-             
-             {/* QUICK SPECS */}
-             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 border-y border-on-background/5 py-8">
-                <div className="space-y-1">
-                   <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">Date</span>
-                   <p className="text-sm font-bold text-primary italic">{eventData.date}</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 border-y border-on-background/5 py-8">
+              {[
+                { label: "Tanggal", value: event.dateFull },
+                { label: "Waktu", value: event.time },
+                { label: "Tempat", value: event.venue },
+                { label: "Tiket", value: `${event.sold} / ${event.capacity} terjual` },
+              ].map((s) => (
+                <div key={s.label} className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">{s.label}</span>
+                  <p className="text-sm font-bold text-primary">{s.value}</p>
                 </div>
-                <div className="space-y-1">
-                   <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">Time</span>
-                   <p className="text-sm font-bold text-primary italic">{eventData.time}</p>
-                </div>
-                <div className="space-y-1">
-                   <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">Location</span>
-                   <p className="text-sm font-bold text-primary italic">{eventData.location}</p>
-                </div>
-                <div className="space-y-1">
-                   <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">Identity</span>
-                   <p className="text-sm font-bold text-primary italic">{eventData.trust}% Trust</p>
-                </div>
-             </div>
+              ))}
+            </div>
 
-             {/* ABOUT */}
-             <div className="space-y-6">
-                <h2 className="text-xl font-bold italic tracking-tight lowercase">About the Ritual.</h2>
-                <p className="text-lg text-text-muted leading-relaxed font-medium italic opacity-80">
-                  {eventData.description}
-                </p>
-             </div>
+            <div className="space-y-4">
+              <h2 className="font-bodoni text-2xl font-bold tracking-tight">Tentang event ini</h2>
+              <p className="text-lg text-text-muted leading-relaxed whitespace-pre-line">{event.description}</p>
+            </div>
 
-             {/* LINEUP */}
-             <div className="space-y-8">
-                <div className="flex items-center gap-3 text-accent-teal">
-                   <Music className="w-5 h-5" />
-                   <h2 className="text-xl font-bold italic tracking-tight lowercase">Sonic Curators.</h2>
+            {event.lineup.length > 0 && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 text-accent-ink">
+                  <Music className="w-5 h-5" />
+                  <h2 className="font-bodoni text-2xl font-bold tracking-tight">Susunan acara</h2>
                 </div>
                 <div className="grid grid-cols-1 gap-3">
-                   {eventData.lineup.map((act, i) => (
-                     <div key={i} className="flex justify-between items-center p-6 bg-surface-low border border-on-background/5 rounded-xl group hover:border-accent-teal transition-all shadow-sm">
-                        <div className="flex items-center gap-6">
-                           <span className="text-lg font-bodoni italic opacity-20 group-hover:opacity-100 transition-opacity">0{i+1}</span>
-                           <div>
-                              <p className="text-xl font-bold italic tracking-tight">{act.name}</p>
-                              <p className="text-[10px] font-bold uppercase tracking-widest opacity-40 italic">{act.role}</p>
-                           </div>
-                        </div>
-                        <div className="text-right">
-                           <p className="text-sm font-bold italic">{act.time}</p>
-                           <p className="text-[9px] font-bold uppercase tracking-widest opacity-40">Stage Entry</p>
-                        </div>
-                     </div>
-                   ))}
+                  {event.lineup.map((act, i) => (
+                    <div key={i} className="flex justify-between items-center p-6 bg-surface-low border border-on-background/5 rounded-xl hover:border-accent transition-all">
+                      <div>
+                        <p className="text-lg font-bold tracking-tight">{act.name}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted">{act.role}</p>
+                      </div>
+                      <p className="text-sm font-bold">{act.time}</p>
+                    </div>
+                  ))}
                 </div>
-             </div>
+              </div>
+            )}
 
-             {/* VENUE */}
-             <div className="space-y-8">
-                <div className="flex items-center gap-3 text-accent-peach">
-                   <MapPin className="w-5 h-5" />
-                   <h2 className="text-xl font-bold italic tracking-tight lowercase">Venue Archive.</h2>
-                </div>
-                <div className="relative h-[30vh] rounded-2xl overflow-hidden border border-on-background/10 shadow-md">
-                   <img src="https://images.unsplash.com/photo-1540575861501-7ad0582371f3?auto=format&fit=crop&q=80&w=1200" className="w-full h-full object-cover" alt="Venue" />
-                   <div className="absolute bottom-6 left-6 p-6 bg-background/90 backdrop-blur-xl border border-on-background/10 rounded-xl max-w-sm shadow-xl">
-                      <p className="text-lg font-bold italic leading-none mb-1">{eventData.venue.name}</p>
-                      <p className="text-xs text-text-muted mb-3 italic">{eventData.venue.address}</p>
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-accent-teal italic">Capacity: {eventData.venue.capacity}</p>
-                   </div>
-                </div>
-             </div>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 text-accent-coral">
+                <MapPin className="w-5 h-5" />
+                <h2 className="font-bodoni text-2xl font-bold tracking-tight">Lokasi</h2>
+              </div>
+              <div className="p-6 bg-surface-low border border-on-background/5 rounded-xl">
+                <p className="text-lg font-bold">{event.venue}</p>
+                <p className="text-sm text-text-muted">{event.address}</p>
+              </div>
+            </div>
 
+            {/* Kampanye */}
+            {event.campaign && (
+              <div className="space-y-6 p-8 rounded-[28px] bg-[#0b0d0a] text-white relative overflow-hidden">
+                <div className="absolute -right-10 -top-10 w-48 h-48 rounded-full bg-[#9CFF1E]/20 blur-[70px]" />
+                <div className="relative space-y-6">
+                  <div className="flex items-center gap-3 text-[#9CFF1E]">
+                    <Megaphone className="w-5 h-5" />
+                    <h2 className="text-xl font-bold tracking-tight">Kampanye promosi (jadi clipper)</h2>
+                  </div>
+                  <p className="text-white/70 leading-relaxed">
+                    Buat konten promosi event ini dan dapatkan bayaran. Hadiah cair setelah event selesai.
+                  </p>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
+                      <p className="text-[11px] uppercase tracking-widest text-white/50">Per 1 juta view</p>
+                      <p className="text-2xl font-bold text-[#9CFF1E]">{fmtUsdc(event.campaign.clipRatePerMillion)}</p>
+                      <p className="text-xs text-white/50">≈ {fmtIdr(event.campaign.clipRatePerMillion)}</p>
+                    </div>
+                    <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
+                      <p className="text-[11px] uppercase tracking-widest text-white/50">Per tiket lewat linkmu</p>
+                      <p className="text-2xl font-bold text-[#9CFF1E]">{fmtUsdc(event.campaign.referralReward)}</p>
+                      <p className="text-xs text-white/50">≈ {fmtIdr(event.campaign.referralReward)}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-white/50">
+                    {campaign.data?.participants.length ?? 0} clipper sudah ikut · {campaign.data?.clips.length ?? 0} clip terkirim
+                    {!event.campaign.funded && " · dana kampanye belum disetor penyelenggara"}
+                  </p>
+
+                  {isOwner ? (
+                    <Link href={`/organizer/events/${event.id}`} className="inline-block text-[#9CFF1E] font-semibold underline underline-offset-4">
+                      Kelola kampanye ini
+                    </Link>
+                  ) : joined ? (
+                    <div className="space-y-3">
+                      <p className="flex items-center gap-2 text-[#9CFF1E] font-semibold"><Check className="w-4 h-4" /> Kamu sudah jadi clipper</p>
+                      <div className="flex items-center gap-3 rounded-2xl border border-dashed border-[#9CFF1E]/60 px-4 py-3">
+                        <span className="flex-1 min-w-0 truncate font-mono text-xs text-[#9CFF1E]">{refLink}</span>
+                        <button onClick={copyRef} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#9CFF1E] text-[#141414] text-xs font-semibold shrink-0">
+                          {copied ? <><Check className="w-3.5 h-3.5" /> Tersalin</> : <><Copy className="w-3.5 h-3.5" /> Salin link</>}
+                        </button>
+                      </div>
+                      <Link href="/dashboard/campaigns" className="inline-block text-sm text-[#9CFF1E] underline underline-offset-4">
+                        Kirim clip dan lihat hasilmu
+                      </Link>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={joinCampaign}
+                      disabled={joining || ended || !event.campaign.funded}
+                      className="px-7 py-3 rounded-full bg-[#9CFF1E] text-[#141414] font-semibold disabled:opacity-40"
+                    >
+                      {!accountId ? "Hubungkan wallet untuk ikut" : joining ? "Menunggu wallet…" : "Ikut kampanye"}
+                    </button>
+                  )}
+                  {joinMsg && <p className="text-sm text-white/70">{joinMsg}</p>}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* RIGHT: STICKY BOOKING (COMPACT) */}
+          {/* BOOKING */}
           <div className="lg:col-span-4">
-             <div className="sticky top-28 space-y-6">
-                <div className="p-8 bg-surface border border-on-background/10 rounded-2xl space-y-6 shadow-xl relative overflow-hidden">
-                   <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                      <Ticket className="w-24 h-24 rotate-12" />
-                   </div>
-                   
-                   <div className="space-y-1">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-accent-teal italic leading-none">Archive Entry</p>
-                      <p className="text-3xl font-black italic tracking-tight text-primary leading-none">Rp {eventData.price}</p>
-                   </div>
-
-                   <div className="space-y-3">
-                      <div className="flex justify-between items-center text-xs font-medium border-b border-on-background/5 pb-2">
-                         <span className="opacity-40 italic">Service Charge</span>
-                         <span>Rp 25.000</span>
-                      </div>
-                      <div className="flex justify-between items-center text-xs font-medium border-b border-on-background/5 pb-2">
-                         <span className="opacity-40 italic">Society Fee</span>
-                         <span>Rp 12.000</span>
-                      </div>
-                   </div>
-
-                   <Link href={`/checkout/${eventData.id}`}>
-                     <button className="w-full py-5 bg-primary text-on-primary font-bold uppercase tracking-[0.2em] rounded-full hover:bg-accent-teal transition-all shadow-lg italic flex items-center justify-center gap-2 text-xs">
-                        Initiate Booking <ChevronRight className="w-4 h-4" />
-                     </button>
-                   </Link>
-
-                   <div className="flex items-center gap-2.5 p-3.5 bg-accent-teal/5 rounded-xl border border-accent-teal/10">
-                      <Info className="w-4 h-4 text-accent-teal shrink-0" />
-                      <p className="text-[9px] font-bold uppercase tracking-wider leading-relaxed opacity-60">Verified identity required. All archives are non-transferable via external platforms.</p>
-                   </div>
+            <div className="sticky top-28 space-y-6">
+              <div className="p-8 bg-surface border border-on-background/10 rounded-2xl space-y-6 shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                  <Ticket className="w-24 h-24 rotate-12" />
                 </div>
 
-                <div className="p-6 bg-accent-mint/5 border border-accent-mint/20 rounded-2xl space-y-3">
-                   <div className="flex items-center gap-2 text-accent-mint">
-                      <Users className="w-4 h-4" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">Society Presence</span>
-                   </div>
-                   <p className="text-xs text-text-muted italic leading-relaxed">
-                      12 members of your collective have already archived their presence for this ritual.
-                   </p>
+                <div className="space-y-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-accent-ink leading-none">Pilih pass</p>
+                  {event.tiers.map((t) => {
+                    const active = t.id === selectedTier?.id;
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => setTierId(t.id)}
+                        className={cn(
+                          "w-full text-left p-4 rounded-xl border-2 transition-all",
+                          active ? "border-accent bg-accent/5" : "border-on-background/10 hover:border-on-background/30"
+                        )}
+                      >
+                        <div className="flex justify-between items-baseline gap-4">
+                          <span className="font-bold">{t.name}</span>
+                          <span className="font-bold text-primary text-right text-sm">{fmtPrice(t.price)}</span>
+                        </div>
+                        <p className="text-xs text-text-muted mt-1">{t.perk}</p>
+                      </button>
+                    );
+                  })}
                 </div>
-             </div>
+
+                {/* Rincian harga dari kontrak */}
+                {selectedTier && selectedTier.price > 0 && q && (
+                  <div className="space-y-2 pt-4 border-t border-on-background/10 text-sm">
+                    <Row label="Harga tiket" value={fmtUsdc(q.price)} />
+                    {event.feeBearer === "BUYER" ? (
+                      <>
+                        <Row label="Biaya layanan (3,4%)" value={fmtUsdc(q.platform_fee)} />
+                        {Number(q.promo_fee) > 0 && <Row label="Biaya promosi" value={fmtUsdc(q.promo_fee)} />}
+                      </>
+                    ) : (
+                      <p className="text-xs text-text-muted">Biaya layanan ditanggung penyelenggara.</p>
+                    )}
+                    <div className="flex justify-between items-baseline pt-2 border-t border-on-background/10">
+                      <span className="font-bold">Total</span>
+                      <span className="text-right">
+                        <span className="font-bold text-lg">{fmtUsdc(q.total)}</span>
+                        <span className="block text-xs text-text-muted">≈ {fmtIdr(q.total)}</span>
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {canBuy ? (
+                  <Link href={checkoutHref} className="block">
+                    <button className="w-full py-5 bg-primary text-on-primary font-bold uppercase tracking-[0.2em] rounded-full hover:bg-accent hover:text-[#141414] transition-all shadow-lg flex items-center justify-center gap-2 text-xs">
+                      Beli pass <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </Link>
+                ) : (
+                  <div className="w-full py-5 rounded-full bg-on-background/10 text-text-muted font-bold uppercase tracking-[0.15em] text-center text-xs">
+                    {ended ? "Event selesai" : soldOut ? "Tiket habis" : "Menunggu dana kampanye"}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 bg-accent/5 border border-accent/15 rounded-2xl space-y-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-accent-ink">Yang kamu dapat</p>
+                <ul className="space-y-3 text-sm text-text-muted">
+                  <li className="flex gap-3"><ScanLine className="w-4 h-4 text-accent-ink shrink-0 mt-0.5" /> NFT pass <span className="font-mono">{event.code}-0001</span> di wallet-mu, discan di pintu masuk. Tanpa KTP.</li>
+                  <li className="flex gap-3"><Stamp className="w-4 h-4 text-accent-ink shrink-0 mt-0.5" /> Setelah discan jadi lencana permanen (+{event.stamps} stempel).</li>
+                  <li className="flex gap-3"><MessagesSquare className="w-4 h-4 text-accent-ink shrink-0 mt-0.5" /> Lencana membuka obrolan, voting, dan reward komunitas.</li>
+                </ul>
+              </div>
+            </div>
           </div>
-
         </div>
       </section>
 
       <EditorialFooter />
     </main>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-text-muted">{label}</span>
+      <span className="font-semibold">{value}</span>
+    </div>
   );
 }

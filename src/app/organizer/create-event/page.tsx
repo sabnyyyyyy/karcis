@@ -1,426 +1,475 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Image as ImageIcon, 
-  Ticket, 
-  CheckCircle2,
-  AlertCircle,
-  Plus,
-  Shield,
-  Trash2,
-  Calendar,
-  MapPin,
-  Building,
-  Info,
-  Lock,
-  Zap,
-  ShieldCheck,
-  FileText
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ArrowUpRight, Plus, Trash2, ChevronLeft } from "lucide-react";
+import { EditorialFooter } from "@/components/layout/Footer";
 import { OrganizerGuard } from "@/components/layout/OrganizerGuard";
-import { VerificationLevel, TicketConfig, EventDetails } from "@/types/event";
+import { useProfile } from "@/store/useAuthStore";
+import { useNearWallet } from "@/providers/NearWalletProvider";
+import { CREATABLE_CATEGORIES } from "@/data/events";
+import { useChainConfig } from "@/lib/chain/hooks";
+import { chain } from "@/lib/chain/contract";
+import { buildNewEvent, createEventTx, estimateCreateEventDeposit, isValidEventCode, type EventForm } from "@/lib/chain/builders";
+import { explainChainError } from "@/lib/chain/errors";
+import { fmtIdr, fmtNear, fmtUsdc, idrToUnits } from "@/lib/chain/format";
+import { cn } from "@/lib/utils";
 
-const steps = ["Details", "Config", "Trust", "Publish"];
+const field =
+  "w-full rounded-2xl border border-[#141414]/15 bg-white px-5 py-3.5 text-[15px] outline-none focus:border-[#9CFF1E] focus:ring-2 focus:ring-[#9CFF1E]/40 transition";
+
+const defaultImages: Record<string, string> = {
+  GIGS: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=1200",
+  PAMERAN: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=1200",
+  FESTIVAL: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&q=80&w=1200",
+  KOMUNITAS: "https://images.unsplash.com/photo-1514525253361-bee43833075d?auto=format&fit=crop&q=80&w=1200",
+  WORKSHOP: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=1200",
+};
+
+interface TierDraft {
+  key: string;
+  name: string;
+  /** Rupiah */
+  price: string;
+  perk: string;
+}
+
+const newTier = (name = ""): TierDraft => ({ key: Math.random().toString(36).slice(2), name, price: "", perk: "" });
 
 export default function CreateEventPage() {
-  const [currentStep, setCurrentStep] = useState(0);
-  
-  // Form State
-  const [eventDetails, setEventDetails] = useState<EventDetails>({
-    name: "",
-    category: "Concert",
-    description: "",
-    venue: "",
-    city: "",
-    date: "",
-  });
-
-  const [tickets, setTickets] = useState<TicketConfig[]>([
-    {
-      id: "1",
-      name: "General Admission",
-      quantity: 100,
-      price: 0,
-      salesStart: "",
-      salesEnd: "",
-      verificationLevel: "Verified",
-    }
-  ]);
-
-  const handleNext = () => setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
-  const handleBack = () => setCurrentStep(prev => Math.max(prev - 1, 0));
-
-  const updateEventDetail = (field: keyof EventDetails, value: string) => {
-    setEventDetails(prev => ({ ...prev, [field]: value }));
-  };
-
-  const addTicket = () => {
-    setTickets(prev => [
-      ...prev,
-      {
-        id: Math.random().toString(36).substr(2, 9),
-        name: "",
-        quantity: 0,
-        price: 0,
-        salesStart: "",
-        salesEnd: "",
-        verificationLevel: "Verified",
-      }
-    ]);
-  };
-
-  const removeTicket = (id: string) => {
-    if (tickets.length > 1) {
-      setTickets(prev => prev.filter(t => t.id !== id));
-    }
-  };
-
-  const updateTicket = (id: string, field: keyof TicketConfig, value: string | number) => {
-    setTickets(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t));
-  };
-
-  const trustImpact = useMemo(() => {
-    const totalTickets = tickets.reduce((sum, t) => sum + t.quantity, 0);
-    const avgPrice = tickets.length > 0 ? tickets.reduce((sum, t) => sum + t.price, 0) / tickets.length : 0;
-    let estimatedScore = 65;
-    if (eventDetails.description.length > 200) estimatedScore += 5;
-    if (tickets.some(t => t.verificationLevel === "Ultimate")) estimatedScore += 15;
-    const minPool = totalTickets * avgPrice * 0.1;
-    const verificationSummary = tickets.every(t => t.verificationLevel === "Ultimate") ? "Ultimate" : "Standard";
-    return { estimatedScore, minPool, verificationSummary };
-  }, [tickets, eventDetails]);
-
   return (
     <OrganizerGuard>
-      <main className="min-h-screen bg-background text-primary flex flex-col pt-0 font-inter">
-        <div className="container-editorial py-32 max-w-[1440px] mx-auto">
-          
-          {/* Progress Header */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-12 mb-20 pb-8 border-b border-border-main">
-            <div className="space-y-6">
-              <Link href="/organizer" className="text-label text-text-muted hover:text-primary transition-all">
-                <ChevronLeft className="w-4 h-4 inline mr-2" /> Back
-              </Link>
-              <h1 className="text-6xl font-bodoni italic tracking-tighter uppercase">Initiate <br /> <span className="not-italic">Experience.</span></h1>
-            </div>
-            <div className="flex items-center space-x-12">
-              {steps.map((label, i) => (
-                <div key={i} className="flex items-center space-x-4">
-                  <div className={cn(
-                    "w-10 h-10 border flex items-center justify-center text-label transition-all",
-                    currentStep === i ? "border-accent bg-accent text-black" : 
-                    currentStep > i ? "border-primary bg-primary text-black" : "border-border-main text-text-muted"
-                  )}>
-                    0{i + 1}
-                  </div>
-                  {i === currentStep && (
-                    <span className="text-label text-primary">{label}</span>
-                  )}
-                </div>
-              ))}
-            </div>
+      <Form />
+    </OrganizerGuard>
+  );
+}
+
+function Form() {
+  const router = useRouter();
+  const profile = useProfile();
+  const { accountId, sendTransactions } = useNearWallet();
+  const config = useChainConfig();
+
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState<string>("GIGS");
+  const [city, setCity] = useState(profile?.organizer?.city ?? "");
+  const [venue, setVenue] = useState("");
+  const [address, setAddress] = useState("");
+  const [date, setDate] = useState("");
+  const [start, setStart] = useState("19:00");
+  const [end, setEnd] = useState("22:00");
+  const [description, setDescription] = useState("");
+  const [image, setImage] = useState("");
+  const [stamps, setStamps] = useState(1);
+  const [capacity, setCapacity] = useState("100");
+  const [tiers, setTiers] = useState<TierDraft[]>([{ ...newTier("Reguler"), price: "50000", perk: "Masuk + stempel" }]);
+
+  const [code, setCode] = useState("");
+  const [nftName, setNftName] = useState("");
+  const [badgeImage, setBadgeImage] = useState("");
+  const [codeTaken, setCodeTaken] = useState(false);
+
+  const [feeBearer, setFeeBearer] = useState<"BUYER" | "SELLER">("BUYER");
+  const [useCampaign, setUseCampaign] = useState(false);
+  const [clipRate, setClipRate] = useState("5000");
+  const [refReward, setRefReward] = useState("5000");
+
+  const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+
+  const updateTier = (key: string, patch: Partial<TierDraft>) =>
+    setTiers((ts) => ts.map((t) => (t.key === key ? { ...t, ...patch } : t)));
+
+  // Cek apakah kode sudah dipakai event lain
+  useEffect(() => {
+    setCodeTaken(false);
+    if (!isValidEventCode(code)) return;
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const e = await chain.eventByCode(code);
+        if (!cancelled) setCodeTaken(!!e);
+      } catch {
+        // abaikan; kontrak tetap menolak kode ganda
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [code]);
+
+  const minPaid = Number(config.data?.min_paid_price ?? 0);
+  const tierUnits = tiers.map((t) => idrToUnits(Number(t.price) || 0));
+  const paidUnits = tierUnits.filter((u) => u > 0);
+  const lowestPaid = paidUnits.length ? Math.min(...paidUnits) : 0;
+  const cap = Math.max(0, Math.floor(Number(capacity) || 0));
+  const clipUnits = idrToUnits(Number(clipRate) || 0);
+  const refUnits = idrToUnits(Number(refReward) || 0);
+
+  // Deposit kampanye = kapasitas × harga termurah × 3% × 10% (sama dengan kontrak)
+  const deposit = useMemo(() => Math.floor(((cap * lowestPaid * 300) / 10000) * 0.1), [cap, lowestPaid]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!profile?.organizer || !accountId) return;
+
+    const cleanCode = code.trim().toUpperCase();
+    if (!isValidEventCode(cleanCode)) return setError("Kode event harus 3 sampai 8 huruf besar atau angka.");
+    if (codeTaken) return setError("Kode event sudah dipakai event lain.");
+    if (tiers.some((t) => !t.name.trim())) return setError("Setiap jenis pass perlu nama.");
+    if (!date) return setError("Pilih tanggal event.");
+    if (cap < 1) return setError("Kapasitas minimal 1 tiket.");
+    if (minPaid && paidUnits.some((u) => u < minPaid)) {
+      return setError(`Harga pass berbayar minimal ${fmtUsdc(minPaid)} (sekitar ${fmtIdr(minPaid)}).`);
+    }
+    if (useCampaign) {
+      if (!lowestPaid) return setError("Kampanye butuh minimal satu pass berbayar.");
+      if (clipUnits <= 0 || refUnits <= 0) return setError("Tarif clip dan hadiah referral harus lebih dari 0.");
+      if (refUnits > lowestPaid) return setError("Hadiah referral tidak boleh melebihi harga pass termurah.");
+    }
+
+    const startAt = new Date(`${date}T${start}:00`);
+    let endAt = new Date(`${date}T${end}:00`);
+    if (endAt <= startAt) endAt = new Date(endAt.getTime() + 24 * 3600 * 1000); // lewat tengah malam
+    if (endAt.getTime() <= Date.now()) return setError("Waktu selesai event harus di masa depan.");
+
+    const d = new Date(`${date}T00:00:00`);
+    const form: EventForm = {
+      title,
+      category,
+      organizerName: profile.organizer.orgName,
+      city,
+      venue,
+      address,
+      dateLabel: d.toLocaleDateString("id-ID", { day: "numeric", month: "short" }),
+      dateFull: d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+      time: `${start} - ${end}`,
+      image: image.trim() || defaultImages[category] || "",
+      description,
+      lineup: [],
+      tiers: tiers.map((t, i) => ({
+        id: `t${i + 1}`,
+        name: t.name,
+        priceUnits: tierUnits[i],
+        perk: t.perk.trim() || `Masuk + ${stamps} stempel`,
+      })),
+      stamps,
+      capacity: cap,
+      endsAtMs: endAt.getTime(),
+      feeBearer,
+      code: cleanCode,
+      nftName,
+      badgeImage,
+      campaign: useCampaign ? { clipRatePerMillionUnits: clipUnits, referralRewardUnits: refUnits } : null,
+    };
+
+    setSending(true);
+    try {
+      const input = buildNewEvent(form);
+      await sendTransactions([createEventTx(input)], { callbackUrl: `${window.location.origin}/organizer` });
+      const created = await chain.eventByCode(cleanCode);
+      router.push(created ? `/organizer/events/${created.id}` : "/organizer");
+    } catch (err) {
+      setError(explainChainError(err));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const previewInput = useMemo(() => {
+    try {
+      return buildNewEvent({
+        title: title || "x",
+        category,
+        organizerName: profile?.organizer?.orgName ?? "",
+        city,
+        venue,
+        address,
+        dateLabel: "",
+        dateFull: "",
+        time: `${start} - ${end}`,
+        image: image || defaultImages[category] || "",
+        description,
+        lineup: [],
+        tiers: tiers.map((t, i) => ({ id: `t${i + 1}`, name: t.name, priceUnits: tierUnits[i], perk: t.perk })),
+        stamps,
+        capacity: cap || 1,
+        endsAtMs: Date.now() + 86400000,
+        feeBearer,
+        code: code || "ABC",
+        nftName,
+        badgeImage,
+        campaign: useCampaign ? { clipRatePerMillionUnits: clipUnits || 1, referralRewardUnits: refUnits || 1 } : null,
+      });
+    } catch {
+      return null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, category, city, venue, address, start, end, image, description, tiers, stamps, cap, feeBearer, code, nftName, badgeImage, useCampaign, clipUnits, refUnits]);
+  const nearDeposit = previewInput ? estimateCreateEventDeposit(previewInput) : "0";
+
+  const previewCode = code.trim().toUpperCase() || "KODE";
+
+  return (
+    <main data-nav-theme="light" className="min-h-screen bg-white text-[#141414] pt-16 flex flex-col">
+      <section className="relative px-6 md:px-12 py-16 overflow-hidden flex-1">
+        <div className="absolute inset-0 lime-grid [mask-image:linear-gradient(180deg,#000,transparent_70%)] pointer-events-none" />
+        <form onSubmit={submit} className="relative max-w-3xl mx-auto space-y-12">
+          <div className="space-y-4">
+            <Link href="/organizer" className="inline-flex items-center gap-1 text-sm text-[#5C6157] hover:text-[#141414]">
+              <ChevronLeft className="w-4 h-4" /> Panel
+            </Link>
+            <h1 className="text-[40px] md:text-[56px] font-extrabold tracking-[-0.04em] leading-none">Buat event.</h1>
+            <p className="text-[#5C6157] max-w-lg">
+              Event ini ditulis ke kontrak NEAR. Harga diisi dalam Rupiah dan dikonversi ke {config.data ? "USDC" : "stablecoin"} sesuai kurs tampilan.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-24">
-            
-            {/* Main Content Area */}
-            <div className="lg:col-span-8 space-y-12">
-              <AnimatePresence mode="wait">
-                
-                {/* Step 1: Details */}
-                {currentStep === 0 && (
-                  <motion.div key="step0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
-                    <div className="space-y-4">
-                      <h2 className="text-4xl font-bodoni uppercase tracking-tight italic text-primary">01 / Event Details.</h2>
-                      <p className="font-bodoni text-xl text-text-muted italic">Lengkapi detail event untuk verifikasi infrastruktur.</p>
-                    </div>
-                    <div className="bg-surface border border-border-main p-12 space-y-10">
-                      <div className="space-y-4">
-                        <Label className="text-label text-text-muted">Event Name</Label>
-                        <Input 
-                          value={eventDetails.name}
-                          onChange={(e) => updateEventDetail("name", e.target.value)}
-                          placeholder="EX: SOLTIX ARCHIVE 2026" 
-                          className="h-16 bg-background border-border-main rounded-none text-label focus:border-accent text-primary placeholder:text-text-muted" 
-                        />
-                      </div>
+          <Block title="Tentang event">
+            <Label text="Nama event">
+              <input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Gigs Basement Vol. 13" className={field} />
+            </Label>
+            <div className="space-y-2 text-[13px] font-semibold">
+              Kategori
+              <div className="flex flex-wrap gap-2">
+                {CREATABLE_CATEGORIES.map((c) => (
+                  <button
+                    type="button"
+                    key={c}
+                    onClick={() => setCategory(c)}
+                    className={cn(
+                      "px-4 py-2.5 rounded-full border text-[12px] font-semibold uppercase tracking-widest transition-all",
+                      category === c ? "bg-[#9CFF1E] border-[#9CFF1E]" : "border-[#141414]/15 hover:border-[#141414]/40"
+                    )}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Label text="Deskripsi">
+              <textarea required rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ceritakan acaranya" className={cn(field, "resize-none")} />
+            </Label>
+            <Label text="Link gambar (opsional)">
+              <input value={image} onChange={(e) => setImage(e.target.value)} placeholder="https://..." className={field} />
+            </Label>
+          </Block>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                        <div className="space-y-4">
-                          <Label className="text-label text-text-muted">Category</Label>
-                          <select 
-                            value={eventDetails.category}
-                            onChange={(e) => updateEventDetail("category", e.target.value)}
-                            className="w-full h-16 bg-background border border-border-main rounded-none px-4 text-label focus:outline-none focus:border-accent text-primary appearance-none cursor-pointer"
-                          >
-                            <option>Concert</option>
-                            <option>Festival</option>
-                            <option>Conference</option>
-                          </select>
-                        </div>
-                        <div className="space-y-4">
-                          <Label className="text-label text-text-muted">Event Date</Label>
-                          <Input 
-                            type="date"
-                            value={eventDetails.date}
-                            onChange={(e) => updateEventDetail("date", e.target.value)}
-                            className="h-16 bg-background border-border-main rounded-none text-label focus:border-accent text-primary" 
-                          />
-                        </div>
-                      </div>
+          <Block title="Waktu & tempat">
+            <div className="grid sm:grid-cols-3 gap-5">
+              <Label text="Tanggal">
+                <input required type="date" value={date} onChange={(e) => setDate(e.target.value)} className={field} />
+              </Label>
+              <Label text="Mulai">
+                <input required type="time" value={start} onChange={(e) => setStart(e.target.value)} className={field} />
+              </Label>
+              <Label text="Selesai">
+                <input required type="time" value={end} onChange={(e) => setEnd(e.target.value)} className={field} />
+              </Label>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-5">
+              <Label text="Nama tempat">
+                <input required value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="Basement Studio" className={field} />
+              </Label>
+              <Label text="Kota">
+                <input required value={city} onChange={(e) => setCity(e.target.value)} placeholder="Bandung" className={field} />
+              </Label>
+            </div>
+            <Label text="Alamat (opsional)">
+              <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Jl. Contoh No. 1" className={field} />
+            </Label>
+          </Block>
 
-                      <div className="space-y-4">
-                        <Label className="text-label text-text-muted">Description</Label>
-                        <textarea 
-                          value={eventDetails.description}
-                          onChange={(e) => updateEventDetail("description", e.target.value)}
-                          className="w-full h-40 bg-background border border-border-main rounded-none p-4 text-label focus:outline-none focus:border-accent text-primary resize-none placeholder:text-text-muted" 
-                          placeholder="BERIKAN DESKRIPSI LENGKAP..."
-                        />
-                      </div>
+          <Block title="Pass, kapasitas & stempel">
+            <Label text="Kapasitas (jumlah tiket)">
+              <input required type="number" min={1} max={100000} value={capacity} onChange={(e) => setCapacity(e.target.value)} className={field} />
+            </Label>
 
-                      <div className="space-y-6">
-                        <Label className="text-label text-text-muted">Banner Image</Label>
-                        <div className="aspect-video bg-background border border-dashed border-border-main rounded-none flex flex-col items-center justify-center space-y-6 group hover:border-accent transition-all cursor-pointer">
-                          <div className="w-16 h-16 bg-primary text-black flex items-center justify-center group-hover:bg-accent transition-all">
-                            <ImageIcon className="w-8 h-8" />
-                          </div>
-                          <p className="text-label text-text-muted">UPLOAD OBJECT IMAGE</p>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Step 2: Config */}
-                {currentStep === 1 && (
-                  <motion.div key="step1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
-                    <div className="flex justify-between items-end">
-                      <div className="space-y-4">
-                        <h2 className="text-4xl font-bodoni uppercase tracking-tight italic text-primary">02 / Ticket Configuration.</h2>
-                        <p className="font-bodoni text-xl text-text-muted italic">Define your ticket types and verification levels.</p>
-                      </div>
-                      <Button onClick={addTicket} className="h-12 bg-primary text-black text-label italic hover:bg-accent transition-all rounded-none">
-                        <Plus className="w-4 h-4 mr-2" /> Add
-                      </Button>
-                    </div>
-
-                    <div className="space-y-8">
-                      {tickets.map((ticket, index) => (
-                        <div key={ticket.id} className="bg-surface border border-border-main p-12 space-y-10 relative">
-                          <div className="absolute top-0 left-0 w-1 h-full bg-accent" />
-                          <div className="flex justify-between items-center">
-                            <span className="text-label text-accent">OBJECT #{index + 1}</span>
-                            {tickets.length > 1 && (
-                              <button onClick={() => removeTicket(ticket.id)} className="text-label text-text-muted hover:text-accent transition-all">REMOVE</button>
-                            )}
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                            <div className="space-y-4">
-                              <Label className="text-label text-text-muted">Name</Label>
-                              <Input 
-                                value={ticket.name}
-                                onChange={(e) => updateTicket(ticket.id, "name", e.target.value)}
-                                placeholder="EX: EARLY BIRD" 
-                                className="h-16 bg-background border-border-main rounded-none text-label focus:border-accent text-primary" 
-                              />
-                            </div>
-                            <div className="space-y-4">
-                              <Label className="text-label text-text-muted">Quantity</Label>
-                              <Input 
-                                type="number"
-                                value={ticket.quantity}
-                                onChange={(e) => updateTicket(ticket.id, "quantity", parseInt(e.target.value))}
-                                className="h-16 bg-background border-border-main rounded-none text-label focus:border-accent text-primary" 
-                              />
-                            </div>
-                            <div className="space-y-4">
-                              <Label className="text-label text-text-muted">Price (IDR)</Label>
-                              <Input 
-                                type="number"
-                                value={ticket.price}
-                                onChange={(e) => updateTicket(ticket.id, "price", parseInt(e.target.value))}
-                                className="h-16 bg-background border-border-main rounded-none text-label focus:border-accent text-primary" 
-                              />
-                            </div>
-                            <div className="space-y-4">
-                              <Label className="text-label text-text-muted">Verification</Label>
-                              <div className="grid grid-cols-3 gap-2">
-                                {(["Standard", "Verified", "Ultimate"] as VerificationLevel[]).map((level) => (
-                                  <button
-                                    key={level}
-                                    onClick={() => updateTicket(ticket.id, "verificationLevel", level)}
-                                    className={cn(
-                                      "h-16 border text-label transition-all",
-                                      ticket.verificationLevel === level 
-                                        ? "border-accent bg-accent text-black" 
-                                        : "border-border-main text-text-muted hover:border-accent"
-                                    )}
-                                  >
-                                    {level}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Step 3: Trust */}
-                {currentStep === 2 && (
-                  <motion.div key="step2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
-                    <div className="space-y-4">
-                      <h2 className="text-4xl font-bodoni uppercase tracking-tight italic text-primary">03 / Trust manifest.</h2>
-                      <p className="font-bodoni text-xl text-text-muted italic">Review infrastruktur kepercayaan.</p>
-                    </div>
-
-                    <div className="bg-surface border border-border-main p-12 space-y-10">
-                      {[
-                        { title: "Trust Infrastructure", icon: ShieldCheck, desc: "Event di SolTix menggunakan infrastruktur Trust Pool." },
-                        { title: "Commitment", icon: FileText, desc: "Anda berkomitmen pada transparansi penjualan." },
-                        { title: "Ownership", icon: Shield, desc: "Verifikasi kepemilikan digital aktif." }
-                      ].map((item, i) => (
-                        <div key={i} className="flex items-start space-x-6">
-                          <div className="w-12 h-12 bg-primary text-black flex items-center justify-center shrink-0">
-                            <item.icon className="w-6 h-6" />
-                          </div>
-                          <div className="space-y-2">
-                            <h3 className="text-label text-primary">{item.title}</h3>
-                            <p className="font-bodoni text-lg text-text-muted italic">{item.desc}</p>
-                          </div>
-                        </div>
-                      ))}
-
-                      <div className="pt-10 border-t border-border-main flex items-center space-x-4">
-                        <input type="checkbox" id="agree" className="w-5 h-5 border-border-main bg-background rounded-none text-accent focus:ring-0" />
-                        <label htmlFor="agree" className="text-label text-text-muted cursor-pointer">I agree to the Trust & Verification Agreement</label>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Step 4: Publish */}
-                {currentStep === 3 && (
-                  <motion.div key="step3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
-                    <div className="space-y-4">
-                      <h2 className="text-4xl font-bodoni uppercase tracking-tight italic text-primary">04 / Review & Publish.</h2>
-                      <p className="font-bodoni text-xl text-text-muted italic">Tinjau detail event sebelum dikirim.</p>
-                    </div>
-
-                    <div className="bg-surface border border-border-main p-12 space-y-12">
-                      <div className="grid grid-cols-2 gap-12">
-                        <div className="space-y-1">
-                          <p className="text-label text-text-muted">Event Name</p>
-                          <p className="font-bodoni text-2xl text-primary italic uppercase">{eventDetails.name || "UNTITLED OBJECT"}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-label text-text-muted">Location</p>
-                          <p className="font-bodoni text-2xl text-primary italic uppercase">{eventDetails.city || "ARCHIVE"}</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-6">
-                        <p className="text-label text-text-muted">Ticket Hierarchy</p>
-                        {tickets.map((t) => (
-                          <div key={t.id} className="flex items-center justify-between py-4 border-b border-border-main">
-                            <p className="font-bodoni text-xl text-primary italic uppercase">{t.name || "STANDARD"}</p>
-                            <p className="text-label text-accent">{t.quantity} UNITS / IDR {t.price.toLocaleString()}</p>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="pt-10 flex flex-col sm:flex-row gap-8">
-                        <Button className="h-16 flex-1 bg-primary text-black text-label italic hover:bg-accent transition-all rounded-none">
-                          PUBLISH ARCHIVE
-                        </Button>
-                        <Button variant="outline" className="h-16 flex-1 border border-border-main text-primary text-label italic hover:border-accent transition-all rounded-none">
-                          SAVE DRAFT
-                        </Button>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-              </AnimatePresence>
-
-              {/* Navigation */}
-              {currentStep < 3 && (
-                <div className="flex items-center justify-between pt-12 border-t border-border-main">
-                  {currentStep > 0 ? (
-                    <button onClick={handleBack} className="text-label text-text-muted hover:text-primary transition-all">PREVIOUS</button>
-                  ) : (
-                    <div />
-                  )}
-                  <Button onClick={handleNext} className="h-16 px-12 bg-primary text-black text-label italic hover:bg-accent transition-all rounded-none">
-                    NEXT PHASE
-                  </Button>
+            <div className="space-y-4">
+              {tiers.map((t, i) => (
+                <div key={t.key} className="p-5 rounded-3xl border border-[#141414]/10 bg-[#F5F8EE] grid sm:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+                  <Label text="Nama pass">
+                    <input required value={t.name} onChange={(e) => updateTier(t.key, { name: e.target.value })} placeholder="Reguler" className={field} />
+                  </Label>
+                  <Label text="Harga (Rp, 0 = gratis)">
+                    <input required type="number" min={0} value={t.price} onChange={(e) => updateTier(t.key, { price: e.target.value })} placeholder="50000" className={field} />
+                  </Label>
+                  <button
+                    type="button"
+                    disabled={tiers.length === 1}
+                    onClick={() => setTiers((ts) => ts.filter((x) => x.key !== t.key))}
+                    aria-label="Hapus pass"
+                    className="h-[52px] w-[52px] rounded-2xl border border-[#141414]/15 flex items-center justify-center hover:bg-[#E5484D] hover:text-white hover:border-[#E5484D] transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  <div className="sm:col-span-3 space-y-3">
+                    <Label text="Yang didapat (opsional)">
+                      <input value={t.perk} onChange={(e) => updateTier(t.key, { perk: e.target.value })} placeholder="Masuk + stiker edisi terbatas" className={field} />
+                    </Label>
+                    <p className="text-xs text-[#5C6157]">
+                      Disimpan sebagai {tierUnits[i] === 0 ? "gratis" : `${fmtUsdc(tierUnits[i])} (≈ ${fmtIdr(tierUnits[i])})`}
+                    </p>
+                  </div>
                 </div>
+              ))}
+              {tiers.length < 6 && (
+                <button
+                  type="button"
+                  onClick={() => setTiers((ts) => [...ts, newTier()])}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#3F7D00] hover:underline"
+                >
+                  <Plus className="w-4 h-4" /> Tambah jenis pass
+                </button>
               )}
+              {minPaid > 0 && <p className="text-xs text-[#5C6157]">Harga pass berbayar minimal {fmtUsdc(minPaid)} ({fmtIdr(minPaid)}).</p>}
             </div>
 
-            {/* Right Column: Side Panel */}
-            <div className="lg:col-span-4">
-              <div className="sticky top-40 space-y-12">
-                <div className="bg-primary p-12 space-y-10 border border-border-main text-black">
-                  <div className="space-y-2">
-                    <h3 className="text-3xl font-bodoni uppercase tracking-tight italic">Trust Impact.</h3>
-                    <p className="text-label text-black/40">Live live estimations.</p>
-                  </div>
+            <div className="space-y-2 text-[13px] font-semibold">
+              Stempel untuk yang hadir
+              <div className="flex gap-2">
+                {[1, 2, 3].map((n) => (
+                  <button
+                    type="button"
+                    key={n}
+                    onClick={() => setStamps(n)}
+                    className={cn(
+                      "w-14 h-14 rounded-full border-2 text-lg font-bold transition-all",
+                      stamps === n ? "bg-[#9CFF1E] border-[#9CFF1E]" : "border-[#141414]/15 hover:border-[#141414]/40"
+                    )}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+              <p className="font-normal text-[#5C6157]">Event kecil biasanya 1 stempel. Event besar komunitas bisa 2 atau 3.</p>
+            </div>
+          </Block>
 
-                  <div className="space-y-8">
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-end">
-                        <span className="text-label text-black/60">EST. SCORE</span>
-                        <span className="font-bodoni text-4xl italic leading-none">{trustImpact.estimatedScore}</span>
-                      </div>
-                      <div className="w-full h-[1px] bg-black/10">
-                        <div className="h-full bg-black transition-all" style={{ width: `${trustImpact.estimatedScore}%` }} />
-                      </div>
-                    </div>
+          <Block title="Identitas NFT pass">
+            <div className="grid sm:grid-cols-2 gap-5">
+              <Label text="Kode event (awalan ID pass)">
+                <input
+                  required
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8))}
+                  placeholder="GIGS13"
+                  className={cn(field, "font-mono uppercase", codeTaken && "border-[#E5484D]")}
+                />
+              </Label>
+              <Label text="Nama NFT (opsional)">
+                <input value={nftName} onChange={(e) => setNftName(e.target.value)} placeholder={title || "Sama dengan nama event"} className={field} />
+              </Label>
+            </div>
+            <p className="text-xs text-[#5C6157]">
+              {codeTaken ? <span className="text-[#E5484D]">Kode ini sudah dipakai.</span> : "3 sampai 8 huruf besar atau angka, unik di seluruh platform."} Contoh ID pass:{" "}
+              <span className="font-mono">{previewCode}-0001</span>
+            </p>
+            <Label text="Gambar lencana setelah check-in (opsional)">
+              <input value={badgeImage} onChange={(e) => setBadgeImage(e.target.value)} placeholder="https://... (kosong = pakai gambar event)" className={field} />
+            </Label>
+          </Block>
 
-                    <div className="space-y-2">
-                      <p className="text-label text-black/60">MIN. TRUST POOL</p>
-                      <p className="font-bodoni text-3xl italic">Rp {trustImpact.minPool.toLocaleString()}</p>
-                    </div>
-
-                    <div className="pt-8 border-t border-black/10">
-                       <p className="font-bodoni text-lg text-black/60 italic leading-tight">
-                         Higher verification levels optimize your trust pool requirement.
-                       </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-8 border border-border-main space-y-6">
-                  <div className="flex items-center space-x-4 text-accent">
-                    <Lock className="w-5 h-5" />
-                    <span className="text-label">SECURED ARCHITECTURE</span>
-                  </div>
-                  <p className="font-bodoni text-lg text-text-muted italic leading-relaxed">
-                    All financial data is secured by the SolTix Trust Infrastructure.
-                  </p>
-                </div>
+          <Block title="Biaya & kampanye promosi">
+            <div className="space-y-3 text-[13px] font-semibold">
+              Siapa yang menanggung biaya layanan 3,4%?
+              <div className="grid sm:grid-cols-2 gap-3">
+                {(
+                  [
+                    { v: "BUYER", t: "Pembeli", d: "Harga tiket tetap, biaya ditambahkan di atasnya saat bayar." },
+                    { v: "SELLER", t: "Penyelenggara", d: "Pembeli bayar sesuai harga tiket, biaya dipotong dari pendapatanmu." },
+                  ] as const
+                ).map((o) => (
+                  <button
+                    type="button"
+                    key={o.v}
+                    onClick={() => setFeeBearer(o.v)}
+                    className={cn(
+                      "text-left p-5 rounded-3xl border-2 transition-all space-y-1",
+                      feeBearer === o.v ? "border-[#9CFF1E] bg-[#9CFF1E]/10" : "border-[#141414]/10 hover:border-[#141414]/30"
+                    )}
+                  >
+                    <p className="text-base font-semibold">{o.t}</p>
+                    <p className="font-normal text-[#5C6157] text-sm leading-snug">{o.d}</p>
+                  </button>
+                ))}
               </div>
             </div>
 
+            <label className="flex items-start gap-4 p-5 rounded-3xl border border-[#141414]/10 bg-[#F5F8EE] cursor-pointer">
+              <input type="checkbox" checked={useCampaign} onChange={(e) => setUseCampaign(e.target.checked)} className="mt-1 w-5 h-5 accent-[#3F7D00]" />
+              <span className="space-y-1">
+                <span className="block font-semibold">Pakai kampanye clipper</span>
+                <span className="block text-sm text-[#5C6157] leading-snug">
+                  Clipper membuat video promosi dan dibayar per 1 juta view, ditambah hadiah per penjualan lewat link referral mereka. Dana cair setelah event selesai. Tanpa kampanye, tidak ada biaya promosi.
+                </span>
+              </span>
+            </label>
+
+            {useCampaign && (
+              <div className="space-y-5">
+                <div className="grid sm:grid-cols-2 gap-5">
+                  <Label text="Bayaran clip per 1 juta view (Rp)">
+                    <input type="number" min={1} value={clipRate} onChange={(e) => setClipRate(e.target.value)} className={field} />
+                  </Label>
+                  <Label text="Hadiah per penjualan referral (Rp)">
+                    <input type="number" min={1} value={refReward} onChange={(e) => setRefReward(e.target.value)} className={field} />
+                  </Label>
+                </div>
+                <div className="p-5 rounded-3xl border border-[#141414]/10 text-sm space-y-2">
+                  <p>
+                    Biaya promosi 3% dari harga tiket (2% untuk pool clip, 1% untuk pool referral) dikumpulkan dari tiap penjualan, di luar biaya layanan 3,4%.
+                  </p>
+                  <p>
+                    Deposit yang kamu setor sebelum penjualan dibuka (10% dari anggaran promosi untuk {cap || 0} tiket):{" "}
+                    <b>{lowestPaid ? `${fmtUsdc(deposit)} (≈ ${fmtIdr(deposit)})` : "isi dulu harga pass berbayar"}</b>
+                  </p>
+                </div>
+              </div>
+            )}
+          </Block>
+
+          <div className="p-5 rounded-3xl border border-[#141414]/10 bg-[#F5F8EE] text-sm text-[#5C6157] space-y-1">
+            <p>
+              Biaya penyimpanan di jaringan NEAR: sekitar <b className="text-[#141414]">{fmtNear(nearDeposit)}</b> dibayar dari walletmu. Kelebihannya dikembalikan otomatis.
+            </p>
+            <p>Siapkan saldo NEAR sedikit lebih besar untuk gas.</p>
           </div>
-        </div>
-      </main>
-    </OrganizerGuard>
+
+          {error && <p className="text-[#E5484D] font-medium">{error}</p>}
+
+          <button
+            type="submit"
+            disabled={sending}
+            className="inline-flex items-center gap-4 px-9 py-4 rounded-full text-[15px] font-semibold text-[#141414] hover:shadow-[0_0_40px_rgba(156,255,30,0.6)] transition-shadow disabled:opacity-60"
+            style={{ background: "linear-gradient(180deg, #C6FF6B 0%, #9CFF1E 100%)" }}
+          >
+            {sending ? "Menunggu wallet…" : "Terbitkan event"} <ArrowUpRight className="w-4 h-4" />
+          </button>
+        </form>
+      </section>
+      <EditorialFooter />
+    </main>
+  );
+}
+
+function Block({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-6">
+      <h2 className="text-2xl font-semibold tracking-[-0.02em] border-b border-black/10 pb-3">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function Label({ text, children }: { text: string; children: React.ReactNode }) {
+  return (
+    <label className="block space-y-2 text-[13px] font-semibold">
+      {text}
+      {children}
+    </label>
   );
 }

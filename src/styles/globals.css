@@ -1,99 +1,190 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #F4EFE8;
-  --color-on-background: #1E2423;
-  
-  --color-surface-lowest: #E4DDD2;
-  --color-surface-low: #ECE6DD;
-  --color-surface: #F4EFE8;
-  --color-surface-high: #F9F7F2;
+  /* Karcis: lime neon + tinta hitam + putih, mengikuti landing page */
+  --color-background: #FFFFFF;
+  --color-on-background: #141414;
+
+  --color-surface-lowest: #E9F0DA;
+  --color-surface-low: #F5F8EE;
+  --color-surface: #FBFDF6;
+  --color-surface-high: #FFFFFF;
   --color-surface-highest: #FFFFFF;
-  
-  --color-on-surface: #1E2423;
-  
-  --color-primary: #1E2423;
-  --color-on-primary: #F4EFE8;
-  
-  --color-accent: #5E908C;
-  --color-accent-teal: #5E908C;
-  --color-accent-mint: #8DB8AE;
-  --color-accent-peach: #E3A06C;
-  --color-accent-coral: #D9897B;
-  --color-accent-lavender: #B8A8D8;
-  
-  --color-text-main: #1E2423;
-  --color-text-muted: #5D6663;
-  
+  --color-surface-alt: #F2F7E6;
+
+  --color-on-surface: #141414;
+
+  --color-primary: #141414;
+  --color-on-primary: #FFFFFF;
+
+  /* accent = lime untuk fill; accent-ink = hijau tua untuk teks di atas putih */
+  --color-accent: #9CFF1E;
+  --color-accent-ink: #3F7D00;
+  --color-accent-teal: #3F7D00;
+  --color-accent-mint: #5FB800;
+  --color-accent-peach: #B8E600;
+  --color-accent-coral: #E5484D;
+  --color-accent-lavender: #CFF58A;
+  --color-accent-pink: #E5484D;
+  --color-accent-blue: #141414;
+  --color-accent-lime: #9CFF1E;
+  --color-accent-olive: #3F7D00;
+  --color-accent-vibrant: #B8FF55;
+  --color-accent-orange: #E58A1F;
+  --color-accent-soft: #EDFFD0;
+  --color-accent-deep-teal: #2E5E00;
+
+  --color-status-error: #E5484D;
+
+  --color-text-main: #141414;
+  --color-text-muted: #5C6157;
+
+  --color-border-main: #E1E7D3;
+
   /* Legacy mapping for surface containers */
-  --color-surface-container-lowest: #E4DDD2;
-  --color-surface-container-low: #ECE6DD;
-  --color-surface-container: #F4EFE8;
-  --color-surface-container-high: #F9F7F2;
+  --color-surface-container-lowest: #E9F0DA;
+  --color-surface-container-low: #F5F8EE;
+  --color-surface-container: #FBFDF6;
+  --color-surface-container-high: #FFFFFF;
   --color-surface-container-highest: #FFFFFF;
-  
-  --font-bodoni: "Bodoni Moda", serif;
-  --font-inter: "Inter", sans-serif;
+
+  /* Satu font di mana-mana: Outfit (diatur next/font di layout) */
+  --font-display: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --font-bodoni: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --font-inter: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
 
   --spacing-section-gap: 48px;
 }
 
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes flame-rise {
+  0% { transform: translate(0, 0) scale(0.7, 0.5); opacity: 0; }
+  18% { opacity: 1; }
+  35% { transform: translate(2px, -30px) scale(1, 1.05); }
+  60% { transform: translate(-2px, -52px) scale(1, 1.15); opacity: 0.75; }
+  100% { transform: translate(1px, -96px) scale(0.55, 1.45); opacity: 0; }
+}
+
+@keyframes fire-pulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
 @layer base {
   body {
-    @apply bg-background text-text-main font-inter antialiased selection:bg-accent selection:text-white overflow-x-hidden;
+    @apply bg-background text-text-main antialiased selection:bg-accent selection:text-[#141414] overflow-x-hidden;
+    font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
     font-size: 16px;
   }
 
+  /* Heading: ketat dan tebal seperti di landing */
+  h1, h2, h3 {
+    letter-spacing: -0.03em;
+  }
+
+  /* Dulu dashboard memakai tema alternatif; sekarang sama dengan tema utama */
   .dark-theme {
-    --color-background: #ECE6DD;
-    --color-on-background: #1E2423;
-    --color-surface: #F4EFE8;
-    --color-primary: #5E908C;
-    --color-text-main: #1E2423;
-    --color-text-muted: #5D6663;
+    --color-background: #FFFFFF;
+    --color-on-background: #141414;
   }
 }
 
 @layer utilities {
   .text-h1 {
     font-size: clamp(40px, 5vw, 72px);
-    line-height: 1.1;
-    font-weight: 900;
-    letter-spacing: -0.03em;
+    line-height: 1.05;
+    font-weight: 800;
+    letter-spacing: -0.04em;
     text-transform: uppercase;
-    font-family: var(--font-bodoni);
+    font-family: var(--font-display);
   }
 
   .text-h2 {
     font-size: clamp(24px, 3.5vw, 36px);
-    line-height: 1.2;
+    line-height: 1.15;
     font-weight: 800;
-    letter-spacing: -0.02em;
-    text-transform: uppercase;
-    font-family: var(--font-bodoni);
-    font-style: italic;
+    letter-spacing: -0.03em;
+    font-family: var(--font-display);
   }
 
   .text-h3 {
     font-size: clamp(18px, 2.5vw, 22px);
     line-height: 1.3;
     font-weight: 700;
-    text-transform: uppercase;
-    font-family: var(--font-bodoni);
+    font-family: var(--font-display);
   }
 
   .text-label {
     font-size: 12px;
     line-height: 1.2;
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
 
+  /* Alias lama supaya halaman lama tetap tampil rapi */
+  .text-label-caps {
+    font-size: 12px;
+    line-height: 1.2;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .text-display-lg {
+    font-size: clamp(36px, 5vw, 64px);
+    line-height: 1.05;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+  }
+  .text-headline-lg {
+    font-size: clamp(28px, 3.5vw, 40px);
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+  .text-headline-md {
+    font-size: clamp(22px, 2.5vw, 28px);
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .container-editorial {
+    width: 100%;
+    max-width: 1440px;
+    margin-inline: auto;
+    padding-inline: 1.5rem;
+  }
+  @media (min-width: 768px) {
+    .container-editorial { padding-inline: 3rem; }
+  }
+  .button-premium {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: all 0.3s ease;
+  }
+  .accent-glow { box-shadow: 0 0 40px rgba(156, 255, 30, 0.35); }
+  .spatial-root, .layer-base, .layer-mid, .layer-fg { position: relative; }
+  .spatial-hover { transition: transform 0.5s ease; }
+  .spatial-hover:hover { transform: translateY(-2px); }
+  .img-cinematic { filter: saturate(0.9) contrast(1.05); }
+
   .glass-effect {
     backdrop-filter: blur(16px);
-    background: rgba(244, 239, 232, 0.85);
-    border-bottom: 1px solid rgba(30, 36, 35, 0.08);
+    background: rgba(255, 255, 255, 0.78);
+    border-bottom: 1px solid rgba(20, 20, 20, 0.06);
   }
 
   .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -120,6 +211,37 @@
   }
 
   .soft-shadow {
-    box-shadow: 0 12px 30px -15px rgba(30,36,35,0.08);
+    box-shadow: 0 12px 30px -15px rgba(20, 20, 20, 0.12);
+  }
+
+  /* Landing: marquee pill */
+  .animate-marquee { animation: marquee 40s linear infinite; }
+  .flame {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: flame-rise 2s ease-out infinite;
+  }
+  .fire-base { animation: fire-pulse 1.3s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    .flame { animation: none; opacity: 0.45; }
+    .fire-base { animation: none; }
+  }
+  .animate-spin-slow { animation: spin-slow 28s linear infinite; }
+  .animate-marquee-reverse { animation: marquee 48s linear infinite reverse; }
+
+  /* Garis grid tipis lime */
+  .lime-grid {
+    background-image:
+      linear-gradient(rgba(156, 255, 30, 0.16) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(156, 255, 30, 0.16) 1px, transparent 1px);
+    background-size: 72px 72px;
+  }
+
+  /* Cap stempel: dipakai di paspor & lencana */
+  .stamp {
+    border: 2px solid var(--color-accent-ink);
+    color: var(--color-accent-ink);
+    border-radius: 9999px;
+    transform: rotate(-8deg);
   }
 }

@@ -6,28 +6,29 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-xl text-[13px] font-black transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98] uppercase tracking-[0.2em] italic",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-full text-[13px] font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98] uppercase tracking-[0.12em]",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-on-primary hover:bg-accent",
+          "bg-primary text-on-primary hover:bg-accent hover:text-[#141414]",
+        lime:
+          "bg-accent text-[#141414] hover:shadow-[0_0_40px_rgba(156,255,30,0.55)]",
         destructive:
           "bg-status-error text-white hover:bg-status-error/90",
         outline:
-          "border border-on-background/20 bg-transparent hover:bg-on-background/5 text-primary",
+          "border border-on-background/20 bg-transparent hover:bg-accent hover:border-accent hover:text-[#141414] text-primary",
         secondary:
           "bg-on-background/5 text-primary hover:bg-on-background/10",
         ghost: "hover:bg-on-background/5 text-primary",
-        link: "text-accent underline-offset-4 hover:underline",
+        link: "text-accent-ink underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-14 px-12 py-2",
-        sm: "h-11 px-8 text-[11px]",
-        lg: "h-20 px-20 text-base",
+        default: "h-14 px-10 py-2",
+        sm: "h-11 px-7 text-[11px]",
+        lg: "h-16 px-14 text-sm",
         icon: "h-12 w-12",
       },
-
     },
     defaultVariants: {
       variant: "default",
