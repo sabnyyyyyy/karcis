@@ -8,7 +8,8 @@ const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "
 
 /** Unggah gambar event/lencana ke Vercel Blob dan kembalikan URL publiknya. */
 export async function POST(request: Request) {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+  // Di Vercel, SDK memakai BLOB_STORE_ID + OIDC; lokal bisa pakai BLOB_READ_WRITE_TOKEN.
+  if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) {
     return Response.json({ error: "Penyimpanan gambar belum diaktifkan. Tempel link gambar saja untuk sementara." }, { status: 503 });
   }
 
@@ -25,9 +26,14 @@ export async function POST(request: Request) {
   if (!ALLOWED.has(file.type)) return Response.json({ error: "Format harus JPG, PNG, atau WebP." }, { status: 415 });
   if (file.size > MAX_BYTES) return Response.json({ error: "Ukuran maksimal 2 MB." }, { status: 413 });
 
-  const blob = await put(`karcis/${crypto.randomUUID()}.${EXT[file.type]}`, file, {
-    access: "public",
-    contentType: file.type,
-  });
-  return Response.json({ url: blob.url });
+  try {
+    const blob = await put(`karcis/${crypto.randomUUID()}.${EXT[file.type]}`, file, {
+      access: "public",
+      contentType: file.type,
+    });
+    return Response.json({ url: blob.url });
+  } catch (e) {
+    console.error("upload gagal", e);
+    return Response.json({ error: "Gagal menyimpan gambar. Coba lagi atau tempel link gambar." }, { status: 502 });
+  }
 }
