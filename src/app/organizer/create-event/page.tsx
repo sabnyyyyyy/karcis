@@ -15,6 +15,7 @@ import { buildNewEvent, createEventTx, estimateCreateEventDeposit, isValidEventC
 import { explainChainError } from "@/lib/chain/errors";
 import { fmtIdr, fmtNear, fmtUsdc, idrToUnits } from "@/lib/chain/format";
 import { cn } from "@/lib/utils";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 
 const field =
   "w-full rounded-2xl border border-[#141414]/15 bg-white px-5 py-3.5 text-[15px] outline-none focus:border-[#9CFF1E] focus:ring-2 focus:ring-[#9CFF1E]/40 transition";
@@ -253,8 +254,8 @@ function Form() {
             <Label text="Deskripsi">
               <textarea required rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ceritakan acaranya" className={cn(field, "resize-none")} />
             </Label>
-            <Label text="Link gambar (opsional)">
-              <input value={image} onChange={(e) => setImage(e.target.value)} placeholder="https://..." className={field} />
+            <Label text="Gambar event (opsional)">
+              <ImageUpload value={image} onChange={setImage} placeholder="atau tempel link gambar: https://..." fieldClass={field} />
             </Label>
           </Block>
 
@@ -369,7 +370,7 @@ function Form() {
               <span className="font-mono">{previewCode}-0001</span>
             </p>
             <Label text="Gambar lencana setelah check-in (opsional)">
-              <input value={badgeImage} onChange={(e) => setBadgeImage(e.target.value)} placeholder="https://... (kosong = pakai gambar event)" className={field} />
+              <ImageUpload value={badgeImage} onChange={setBadgeImage} placeholder="atau tempel link (kosong = pakai gambar event)" fieldClass={field} />
             </Label>
           </Block>
 
