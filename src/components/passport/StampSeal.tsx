@@ -11,7 +11,7 @@ const tilt = (id: string) => {
 };
 
 const shortDate = (iso?: string) =>
-  iso ? new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short" }) : "";
+  iso ? new Date(iso).toLocaleDateString("en-US", { day: "numeric", month: "short" }) : "";
 
 /** Cap bulat untuk satu lencana (pass yang sudah discan) */
 export function StampSeal({ pass, className }: { pass: Pass; className?: string }) {

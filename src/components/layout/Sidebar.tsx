@@ -10,13 +10,13 @@ import { useHydrated } from "@/lib/useHydrated";
 import { levelFor, totalStamps } from "@/lib/passport";
 
 const sidebarLinks = [
-  { name: "Beranda", href: "/dashboard", icon: Home },
-  { name: "Paspor", href: "/dashboard/passport", icon: BookOpen },
-  { name: "Komunitas", href: "/dashboard/community", icon: MessagesSquare },
-  { name: "Pass & Lencana", href: "/dashboard/tickets", icon: Ticket },
-  { name: "Kampanye", href: "/dashboard/campaigns", icon: Megaphone },
-  { name: "Tersimpan", href: "/dashboard/saved", icon: Heart },
-  { name: "Pengaturan", href: "/dashboard/settings", icon: Settings },
+  { name: "Home", href: "/dashboard", icon: Home },
+  { name: "Passport", href: "/dashboard/passport", icon: BookOpen },
+  { name: "Community", href: "/dashboard/community", icon: MessagesSquare },
+  { name: "Passes & Badges", href: "/dashboard/tickets", icon: Ticket },
+  { name: "Campaigns", href: "/dashboard/campaigns", icon: Megaphone },
+  { name: "Saved", href: "/dashboard/saved", icon: Heart },
+  { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 export const Sidebar = () => {
@@ -58,10 +58,10 @@ export const Sidebar = () => {
 
       <div className="pt-8 border-t border-on-background/5 mt-auto">
         <div className="px-6 py-6 bg-surface border border-on-background/5 rounded-xl space-y-3 shadow-sm">
-          <p className="text-[9px] font-bold text-text-muted uppercase tracking-widest opacity-60">Level paspor</p>
+          <p className="text-[9px] font-bold text-text-muted uppercase tracking-widest opacity-60">Passport level</p>
           <p className="font-bodoni text-xl font-black text-primary">{level.name}</p>
           <div className="flex items-center gap-2 text-accent-coral text-[10px] font-bold tracking-widest uppercase">
-            <Stamp className="w-3.5 h-3.5" /> {stamps} stempel
+            <Stamp className="w-3.5 h-3.5" /> {stamps} stamps
           </div>
         </div>
       </div>

@@ -42,7 +42,7 @@ export function ImageUpload({
     if (!file) return;
     setError("");
     if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
-      setError("Format harus JPG, PNG, atau WebP.");
+      setError("The format must be JPG, PNG, or WebP.");
       return;
     }
     setBusy(true);
@@ -52,10 +52,10 @@ export function ImageUpload({
       body.append("file", small, small.type === "image/jpeg" ? "image.jpg" : file.name);
       const res = await fetch("/api/upload", { method: "POST", body });
       const json = (await res.json()) as { url?: string; error?: string };
-      if (!res.ok || !json.url) throw new Error(json.error ?? "Gagal mengunggah.");
+      if (!res.ok || !json.url) throw new Error(json.error ?? "Upload failed.");
       onChange(json.url);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal mengunggah.");
+      setError(e instanceof Error ? e.message : "Upload failed.");
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -67,11 +67,11 @@ export function ImageUpload({
       {value && (
         <div className="relative w-full max-w-[280px] aspect-[4/3] rounded-2xl overflow-hidden border border-[#141414]/10 bg-[#F5F8EE]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={value} alt="Pratinjau" className="w-full h-full object-cover" />
+          <img src={value} alt="Preview" className="w-full h-full object-cover" />
           <button
             type="button"
             onClick={() => onChange("")}
-            aria-label="Hapus gambar"
+            aria-label="Remove image"
             className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 text-[#141414] flex items-center justify-center shadow"
           >
             <X className="w-4 h-4" />
@@ -90,9 +90,9 @@ export function ImageUpload({
         )}
       >
         <ImagePlus className="w-4 h-4" />
-        {busy ? "Mengunggah…" : value ? "Ganti file" : "Unggah file gambar"}
+        {busy ? "Uploading…" : value ? "Replace file" : "Upload image file"}
       </button>
-      <span className="ml-3 text-xs text-[#5C6157]">JPG, PNG, atau WebP, maks 2 MB</span>
+      <span className="ml-3 text-xs text-[#5C6157]">JPG, PNG, or WebP, max 2 MB</span>
 
       <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={fieldClass} />
       {error && <p className="text-xs text-[#E5484D]">{error}</p>}

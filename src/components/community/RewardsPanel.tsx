@@ -35,13 +35,13 @@ export function RewardsPanel({ stamps, accountId }: { stamps: number; accountId:
           </div>
           <div className="space-y-2">
             <p className={cn("text-[11px] font-semibold uppercase tracking-[0.25em]", unlocked ? "text-[#9CFF1E]" : "text-text-muted")}>
-              Reward Penjaga Markas
+              Base Keeper rewards
             </p>
-            <h3 className="text-2xl font-bold tracking-[-0.02em]">Diskon merchandise</h3>
+            <h3 className="text-2xl font-bold tracking-[-0.02em]">Merchandise discount</h3>
             <p className={cn("text-sm leading-relaxed", unlocked ? "text-white/65" : "text-text-muted")}>
               {unlocked
-                ? "Tunjukkan kode ini di lapak merchandise komunitas. Berlaku otomatis selama kamu masih Penjaga Markas."
-                : `Terbuka di ${REWARD_MIN} stempel. Kamu punya ${stamps}, jadi ${REWARD_MIN - stamps} stempel lagi.`}
+                ? "Show this code at the community merch stall. It applies automatically as long as you remain a Base Keeper."
+                : `Unlocks at ${REWARD_MIN} stamps. You have ${stamps}, so ${REWARD_MIN - stamps} more to go.`}
             </p>
           </div>
         </div>
@@ -53,14 +53,14 @@ export function RewardsPanel({ stamps, accountId }: { stamps: number; accountId:
               onClick={copy}
               className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#9CFF1E] text-[#141414] text-xs font-semibold uppercase tracking-widest"
             >
-              {copied ? <><Check className="w-3.5 h-3.5" /> Tersalin</> : <><Copy className="w-3.5 h-3.5" /> Salin</>}
+              {copied ? <><Check className="w-3.5 h-3.5" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
             </button>
           </div>
         )}
       </div>
 
       <p className="text-xs text-text-muted">
-        Kode voucher dibuat dari akunmu dan belum divalidasi on-chain oleh penyelenggara. Reward lain dari komunitas akan ditambahkan di sini.
+        The voucher code is generated from your account and isn&apos;t validated on-chain by the organizer. Other community rewards will be added here.
       </p>
     </div>
   );

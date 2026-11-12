@@ -32,22 +32,22 @@ export default function VerifierPage() {
         <div className="relative max-w-3xl mx-auto space-y-10">
           <div className="space-y-4">
             <Link href="/" className="inline-flex items-center gap-1 text-sm text-[#5C6157] hover:text-[#141414]">
-              <ChevronLeft className="w-4 h-4" /> Beranda
+              <ChevronLeft className="w-4 h-4" /> Home
             </Link>
-            <h1 className="text-[36px] md:text-[52px] font-extrabold tracking-[-0.04em] leading-none">Verifikasi view</h1>
+            <h1 className="text-[36px] md:text-[52px] font-extrabold tracking-[-0.04em] leading-none">View verification</h1>
             <p className="text-[#5C6157] max-w-lg">
-              Setelah event selesai, verifier mengecek jumlah view tiap clip di platformnya lalu melaporkannya ke kontrak. Laporan ini menentukan bayaran clipper.
+              After an event ends, the verifier checks each clip&apos;s view count on its platform and reports it to the contract. This report determines clipper payouts.
             </p>
           </div>
 
           {!accountId ? (
-            <button onClick={signIn} className="px-8 py-3.5 rounded-full bg-[#9CFF1E] font-semibold">Hubungkan wallet</button>
+            <button onClick={signIn} className="px-8 py-3.5 rounded-full bg-[#9CFF1E] font-semibold">Connect wallet</button>
           ) : !isVerifier ? (
             <p className="p-5 rounded-3xl bg-[#FFF4D6] text-[#6b4e00] text-sm">
-              Akun {shortAccount(accountId)} bukan verifier. Verifier di kontrak ini: <span className="font-mono">{config.data?.verifier ?? "-"}</span>.
+              The account {shortAccount(accountId)} isn&apos;t the verifier. The verifier on this contract is: <span className="font-mono">{config.data?.verifier ?? "-"}</span>.
             </p>
           ) : pending.length === 0 ? (
-            <p className="text-[#5C6157]">Tidak ada kampanye yang menunggu laporan view.</p>
+            <p className="text-[#5C6157]">No campaigns are waiting for a view report.</p>
           ) : (
             <div className="space-y-6">
               {pending.map((e) => (
@@ -77,7 +77,7 @@ function ReportCard({ event }: { event: CommunityEvent }) {
     setMsg(null);
     try {
       await sendTransactions([reportViewsTx(event.id, reports)], { callbackUrl: window.location.href });
-      setMsg({ ok: true, text: "Laporan terkirim. Penyelenggara sekarang bisa menyelesaikan kampanye." });
+      setMsg({ ok: true, text: "Report sent. The organizer can now settle the campaign." });
     } catch (e) {
       setMsg({ ok: false, text: explainChainError(e) });
     } finally {
@@ -93,7 +93,7 @@ function ReportCard({ event }: { event: CommunityEvent }) {
       </div>
 
       {clips.length === 0 ? (
-        <p className="text-sm text-[#5C6157]">Tidak ada clip. Kamu tetap bisa mengirim laporan kosong supaya kampanye bisa diselesaikan.</p>
+        <p className="text-sm text-[#5C6157]">There are no clips. You can still send an empty report so the campaign can be settled.</p>
       ) : (
         <ul className="space-y-3">
           {clips.map((c) => (
@@ -106,7 +106,7 @@ function ReportCard({ event }: { event: CommunityEvent }) {
                 min={0}
                 value={views[c.id] ?? ""}
                 onChange={(e) => setViews((v) => ({ ...v, [c.id]: e.target.value }))}
-                placeholder="Jumlah view"
+                placeholder="View count"
                 className="rounded-2xl border border-[#141414]/15 px-4 py-2.5 text-sm outline-none focus:border-[#9CFF1E] focus:ring-2 focus:ring-[#9CFF1E]/40"
               />
             </li>
@@ -119,7 +119,7 @@ function ReportCard({ event }: { event: CommunityEvent }) {
         disabled={busy}
         className="px-7 py-3 rounded-full bg-[#141414] text-white font-semibold hover:bg-[#9CFF1E] hover:text-[#141414] transition-colors disabled:opacity-50"
       >
-        {busy ? "Menunggu wallet…" : "Kirim laporan view"}
+        {busy ? "Waiting for wallet…" : "Submit view report"}
       </button>
       {msg && <p className={msg.ok ? "text-sm text-[#3F7D00]" : "text-sm text-[#E5484D]"}>{msg.text}</p>}
     </div>

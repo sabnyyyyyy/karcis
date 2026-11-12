@@ -15,3 +15,6 @@ export function formatCurrency(amount: number) {
 export function truncateAddress(address: string) {
   return `${address.slice(0, 4)}...${address.slice(-4)}`;
 }
+
+/** "1 stamp" / "3 stamps" */
+export const plural = (n: number, one: string, many = `${one}s`) => (n === 1 ? one : many);

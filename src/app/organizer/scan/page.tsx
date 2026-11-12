@@ -22,7 +22,7 @@ import { chain } from "@/lib/chain/contract";
 import { checkInTx } from "@/lib/chain/builders";
 import { explainChainError } from "@/lib/chain/errors";
 import { shortAccount } from "@/lib/chain/format";
-import { cn } from "@/lib/utils";
+import { cn, plural } from "@/lib/utils";
 
 type ScanKind = "success" | "warn" | "error";
 
@@ -87,39 +87,39 @@ function Scanner() {
       };
 
       const parsed = parsePassPayload(raw);
-      if (!parsed) return push({ kind: "error", title: "Bukan pass Karcis", detail: "QR ini tidak dikenali." });
+      if (!parsed) return push({ kind: "error", title: "Not a Karcis pass", detail: "This QR code isn't recognized." });
 
       busy.current = true;
       try {
         // Selalu baca status terbaru dari kontrak, bukan dari isi QR
         const pass = await chain.pass(parsed.id);
-        if (!pass) return push({ kind: "error", title: "Pass tidak ditemukan", detail: `${parsed.id} tidak terdaftar di kontrak.` });
+        if (!pass) return push({ kind: "error", title: "Pass not found", detail: `${parsed.id} isn't registered on the contract.` });
         if (pass.event_id !== activeEvent.id) {
-          return push({ kind: "warn", title: "Pass untuk event lain", detail: `${pass.id} bukan untuk "${activeEvent.title}".` });
+          return push({ kind: "warn", title: "Pass for another event", detail: `${pass.id} isn't for "${activeEvent.title}".` });
         }
         if (parsed.owner && parsed.owner !== pass.owner) {
-          return push({ kind: "error", title: "QR tidak cocok", detail: `Pemilik di QR berbeda dengan pemilik pass di kontrak.` });
+          return push({ kind: "error", title: "QR mismatch", detail: `The owner in the QR differs from the pass owner on the contract.` });
         }
         if (pass.status === "USED") {
           const when = pass.checked_in_at
-            ? new Date(Number(BigInt(pass.checked_in_at) / 1_000_000n)).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
+            ? new Date(Number(BigInt(pass.checked_in_at) / 1_000_000n)).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
             : "";
-          return push({ kind: "warn", title: "Pass sudah dipakai", detail: `${pass.id} sudah discan${when ? ` pukul ${when}` : ""}.` });
+          return push({ kind: "warn", title: "Pass already used", detail: `${pass.id} was already scanned${when ? ` at ${when}` : ""}.` });
         }
 
         try {
           await sendTransactions([checkInTx(pass.id)], { callbackUrl: window.location.href });
         } catch (err) {
-          return push({ kind: "error", title: "Check-in ditolak", detail: explainChainError(err) });
+          return push({ kind: "error", title: "Check-in rejected", detail: explainChainError(err) });
         }
         push({
           kind: "success",
-          title: "Silakan masuk",
-          detail: `${pass.id} · +${pass.stamps} stempel untuk ${shortAccount(pass.owner)}`,
+          title: "Welcome in",
+          detail: `${pass.id} · +${pass.stamps} ${plural(pass.stamps, "stamp")} for ${shortAccount(pass.owner)}`,
         });
         void refetchEvents();
       } catch (err) {
-        push({ kind: "error", title: "Gagal membaca kontrak", detail: explainChainError(err) });
+        push({ kind: "error", title: "Failed to read the contract", detail: explainChainError(err) });
       } finally {
         busy.current = false;
       }
@@ -138,7 +138,7 @@ function Scanner() {
     setCameraError(null);
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraState("error");
-      setCameraError("Browser ini tidak mendukung kamera. Pakai input manual di samping.");
+      setCameraError("This browser doesn't support the camera. Use manual input beside it.");
       return;
     }
     setCameraState("starting");
@@ -158,8 +158,8 @@ function Scanner() {
       setCameraState("error");
       setCameraError(
         denied
-          ? "Izin kamera ditolak. Aktifkan izin kamera di browser, atau pakai input manual."
-          : "Kamera tidak bisa dibuka. Pakai input manual di samping."
+          ? "Camera permission denied. Enable camera access in your browser, or use manual input."
+          : "The camera couldn't be opened. Use manual input beside it."
       );
     }
   }, []);
@@ -198,9 +198,9 @@ function Scanner() {
   if (!activeEvent) {
     return (
       <main data-nav-theme="light" className="min-h-screen bg-white text-[#141414] pt-16 flex flex-col items-center justify-center gap-5 text-center px-6">
-        <h1 className="text-[32px] font-extrabold tracking-[-0.03em]">Belum ada event untuk discan.</h1>
-        <p className="text-[#5C6157] max-w-md">Buat event dulu, atau minta penyelenggara menambahkan akunmu sebagai petugas scan.</p>
-        <Link href="/organizer/create-event" className="px-8 py-3.5 rounded-full bg-[#9CFF1E] font-semibold">Buat event</Link>
+        <h1 className="text-[32px] font-extrabold tracking-[-0.03em]">No events to scan yet.</h1>
+        <p className="text-[#5C6157] max-w-md">Create an event first, or ask an organizer to add your account as scan staff.</p>
+        <Link href="/organizer/create-event" className="px-8 py-3.5 rounded-full bg-[#9CFF1E] font-semibold">Create event</Link>
       </main>
     );
   }
@@ -224,9 +224,9 @@ function Scanner() {
         <div className="relative max-w-[1100px] mx-auto space-y-8">
           <div className="space-y-4">
             <Link href="/organizer" className="inline-flex items-center gap-1 text-sm text-[#5C6157] hover:text-[#141414]">
-              <ChevronLeft className="w-4 h-4" /> Panel
+              <ChevronLeft className="w-4 h-4" /> Dashboard
             </Link>
-            <h1 className="text-[36px] md:text-[52px] font-extrabold tracking-[-0.04em] leading-none">Scan pintu masuk</h1>
+            <h1 className="text-[36px] md:text-[52px] font-extrabold tracking-[-0.04em] leading-none">Door scan</h1>
           </div>
 
           {/* Pilih event */}
@@ -271,8 +271,8 @@ function Scanner() {
                       {cameraState === "error" && cameraError
                         ? cameraError
                         : cameraState === "starting"
-                          ? "Membuka kamera…"
-                          : "Nyalakan kamera lalu arahkan ke QR di ponsel pengunjung."}
+                          ? "Opening camera…"
+                          : "Turn on the camera and point it at the QR on the attendee's phone."}
                     </p>
                     {cameraState !== "starting" && (
                       <button
@@ -280,7 +280,7 @@ function Scanner() {
                         className="px-7 py-3 rounded-full text-[#141414] font-semibold"
                         style={{ background: "linear-gradient(180deg, #C6FF6B 0%, #9CFF1E 100%)" }}
                       >
-                        Nyalakan kamera
+                        Turn on camera
                       </button>
                     )}
                   </div>
@@ -289,7 +289,7 @@ function Scanner() {
 
               {cameraState === "on" && (
                 <button onClick={stopCamera} className="text-sm text-[#5C6157] hover:text-[#141414] underline underline-offset-4">
-                  Matikan kamera
+                  Turn off camera
                 </button>
               )}
 
@@ -310,7 +310,7 @@ function Scanner() {
                     </div>
                   </>
                 ) : (
-                  <p className="m-auto text-sm">Hasil scan muncul di sini.</p>
+                  <p className="m-auto text-sm">Scan results appear here.</p>
                 )}
               </div>
             </div>
@@ -319,18 +319,18 @@ function Scanner() {
             <div className="space-y-5">
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-5 rounded-3xl bg-[#F5F8EE] border border-black/5">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-[#5C6157]">Sudah masuk</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-[#5C6157]">Checked in</p>
                   <p className="text-4xl font-extrabold tracking-[-0.03em]">{inside}</p>
                 </div>
                 <div className="p-5 rounded-3xl bg-[#F5F8EE] border border-black/5">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-[#5C6157]">Pass terjual</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-[#5C6157]">Passes sold</p>
                   <p className="text-4xl font-extrabold tracking-[-0.03em]">{sold}</p>
                 </div>
               </div>
 
               <form onSubmit={submitManual} className="p-5 rounded-3xl border border-black/10 space-y-3">
                 <label className="flex items-center gap-2 text-[13px] font-semibold">
-                  <Keyboard className="w-4 h-4" /> Input manual
+                  <Keyboard className="w-4 h-4" /> Manual input
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -340,16 +340,16 @@ function Scanner() {
                     className="flex-1 min-w-0 rounded-2xl border border-[#141414]/15 px-4 py-3 text-[15px] font-mono outline-none focus:border-[#9CFF1E] focus:ring-2 focus:ring-[#9CFF1E]/40"
                   />
                   <button type="submit" className="px-5 rounded-2xl bg-[#141414] text-white text-sm font-semibold hover:bg-[#9CFF1E] hover:text-[#141414] transition-colors">
-                    Cek
+                    Check
                   </button>
                 </div>
-                <p className="text-xs text-[#5C6157]">Untuk pengunjung yang QR-nya tidak terbaca. Masukkan ID pass.</p>
+                <p className="text-xs text-[#5C6157]">For attendees whose QR can&apos;t be read. Enter the pass ID.</p>
               </form>
 
               <div className="space-y-3">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-[#5C6157]">Riwayat scan</p>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-[#5C6157]">Scan history</p>
                 {log.length === 0 ? (
-                  <p className="text-sm text-[#5C6157]">Belum ada scan.</p>
+                  <p className="text-sm text-[#5C6157]">No scans yet.</p>
                 ) : (
                   <ul className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
                     {log.map((l, i) => {
@@ -372,7 +372,7 @@ function Scanner() {
 
           <p className="flex items-start gap-2 text-xs text-[#5C6157] max-w-2xl">
             <Info className="w-4 h-4 shrink-0 mt-0.5" />
-            Setiap scan membaca status pass dari kontrak NEAR lalu mencatat check-in on-chain, jadi pemindai bisa dipakai di perangkat mana pun dan satu pass tidak bisa dipakai dua kali. Hanya pemilik event atau petugas scan yang ditunjuk yang boleh check-in.
+            Every scan reads the pass status from the NEAR contract and then records the check-in on-chain, so the scanner works on any device and one pass can&apos;t be used twice. Only the event owner or designated scan staff can check in.
           </p>
         </div>
       </section>

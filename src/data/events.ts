@@ -55,12 +55,12 @@ export interface CommunityEvent {
   ownerAccount: string;
 }
 
-export const EVENT_CATEGORIES: string[] = ["SEMUA", "GIGS", "PAMERAN", "FESTIVAL", "KOMUNITAS", "WORKSHOP"];
+export const EVENT_CATEGORIES: string[] = ["ALL", "GIGS", "EXPO", "FESTIVAL", "COMMUNITY", "WORKSHOP"];
 
 /** Kategori yang bisa dipilih di form buat event */
-export const CREATABLE_CATEGORIES = EVENT_CATEGORIES.filter((c) => c !== "SEMUA");
+export const CREATABLE_CATEGORIES = EVENT_CATEGORIES.filter((c) => c !== "ALL");
 
-/** Harga paling murah (unit token) untuk label "Mulai dari" */
+/** Harga paling murah (unit token) untuk label "Starting from" */
 export const lowestPrice = (e: CommunityEvent) => (e.tiers.length ? Math.min(...e.tiers.map((t) => t.price)) : 0);
 
 export const isEnded = (e: CommunityEvent, now = Date.now()) => now >= e.endsAt;

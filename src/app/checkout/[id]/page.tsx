@@ -95,9 +95,9 @@ function Checkout() {
   if (!event || !tier) {
     return (
       <main className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-6 text-center">
-        <h1 className="font-bodoni text-4xl font-black">Event tidak ditemukan.</h1>
+        <h1 className="font-bodoni text-4xl font-black">Event not found.</h1>
         <Link href="/events" className="px-8 py-3 bg-primary text-on-primary rounded-full text-xs font-bold uppercase tracking-widest">
-          Kembali ke daftar event
+          Back to events
         </Link>
       </main>
     );
@@ -136,7 +136,7 @@ function Checkout() {
       const used = readSuccessValue(outcome);
       if (!isFree && (used === "0" || used === 0)) {
         setPhase("idle");
-        setMessage("Kontrak menolak pembelian ini dan pembayaranmu dikembalikan. Cek apakah tiket masih tersedia, lalu coba lagi.");
+        setMessage("The contract rejected this purchase and your payment was refunded. Check whether tickets are still available, then try again.");
         return;
       }
       await myPasses.refetch();
@@ -173,36 +173,36 @@ function Checkout() {
               <CheckCircle2 className="w-12 h-12" />
             </div>
             <div className="space-y-3">
-              <h1 className="font-bodoni text-5xl font-black tracking-tight">Pass-mu siap.</h1>
+              <h1 className="font-bodoni text-5xl font-black tracking-tight">Your pass is ready.</h1>
               <p className="text-lg text-text-muted max-w-md mx-auto">
-                NFT pass sudah ada di walletmu. Tunjukkan QR-nya di pintu masuk, dan setelah discan ia jadi lencana permanen.
+                The pass NFT is in your wallet. Show its QR at the door, and once scanned it becomes a permanent badge.
               </p>
             </div>
 
             <div className="max-w-md mx-auto bg-surface-low border border-on-background/10 rounded-3xl p-8 space-y-5 text-left">
-              <Line label="ID pass" value={newPass?.id ?? "Memproses…"} mono />
+              <Line label="Pass ID" value={newPass?.id ?? "Processing…"} mono />
               <Line label="Event" value={event.title} />
-              <Line label="Pemilik" value={accountId ? shortAccount(accountId) : "-"} mono />
+              <Line label="Owner" value={accountId ? shortAccount(accountId) : "-"} mono />
               <div className="flex justify-between items-center">
-                <span className="text-xs font-bold uppercase tracking-widest text-text-muted">Stempel</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-text-muted">Stamps</span>
                 <span className="stamp px-3 py-1 text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
-                  <Stamp className="w-3 h-3" /> +{event.stamps} setelah discan
+                  <Stamp className="w-3 h-3" /> +{event.stamps} after scanning
                 </span>
               </div>
               {txHash && (
                 <a href={txUrl(txHash)} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-accent-ink underline underline-offset-4">
-                  Lihat transaksi <ExternalLink className="w-3.5 h-3.5" />
+                  View transaction <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               )}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href={newPass ? `/dashboard/tickets/${newPass.id}` : "/dashboard/tickets"}>
-                <Button className="h-14 px-10 bg-primary text-on-primary font-bold hover:bg-accent transition-all rounded-full">Lihat pass</Button>
+                <Button className="h-14 px-10 bg-primary text-on-primary font-bold hover:bg-accent transition-all rounded-full">View pass</Button>
               </Link>
               <Link href="/events">
                 <Button variant="outline" className="h-14 px-10 border border-on-background/20 text-primary font-bold rounded-full">
-                  Cari event lain
+                  Find another event
                 </Button>
               </Link>
             </div>
@@ -211,9 +211,9 @@ function Checkout() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
             <div className="lg:col-span-7 space-y-10">
               <div className="space-y-3">
-                <h1 className="font-bodoni text-4xl md:text-5xl font-black tracking-tight">Bayar &amp; terima pass</h1>
+                <h1 className="font-bodoni text-4xl md:text-5xl font-black tracking-tight">Pay &amp; receive pass</h1>
                 <p className="text-text-muted">
-                  Pembayaran memakai {CHAIN.stableSymbol} di NEAR {CHAIN.network}. Pass langsung dikirim ke walletmu sebagai NFT.
+                  Payment uses {CHAIN.stableSymbol} on NEAR {CHAIN.network}. The pass is sent straight to your wallet as an NFT.
                 </p>
               </div>
 
@@ -228,8 +228,8 @@ function Checkout() {
                     <p className="font-mono break-all">{accountId}</p>
                     {!isFree && (
                       <p className="text-text-muted">
-                        Saldo {CHAIN.stableSymbol}: <b className="text-primary">{fmtUsdc(have)}</b>
-                        {!enough && <span className="text-accent-coral"> (kurang {fmtUsdc(total - have)})</span>}
+                        Balance {CHAIN.stableSymbol}: <b className="text-primary">{fmtUsdc(have)}</b>
+                        {!enough && <span className="text-accent-coral"> (insufficient {fmtUsdc(total - have)})</span>}
                       </p>
                     )}
                     {!isFree && !enough && canMintTestUsdc() && (
@@ -238,22 +238,21 @@ function Checkout() {
                         disabled={minting}
                         className="inline-flex items-center gap-2 mt-2 px-5 py-2.5 rounded-full border border-on-background/20 text-sm font-semibold hover:bg-accent hover:border-accent hover:text-[#141414] transition-colors disabled:opacity-50"
                       >
-                        <Coins className="w-4 h-4" /> {minting ? "Menunggu wallet…" : "Cetak 100 USDC uji (testnet)"}
+                        <Coins className="w-4 h-4" /> {minting ? "Waiting for wallet…" : "Mint 100 test USDC (testnet)"}
                       </button>
                     )}
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <p className="text-sm text-text-muted">Hubungkan NEAR wallet untuk melanjutkan.</p>
-                    <Button onClick={signIn} variant="lime" className="h-12 px-8">Hubungkan wallet</Button>
+                    <p className="text-sm text-text-muted">Connect a NEAR wallet to continue.</p>
+                    <Button onClick={signIn} variant="lime" className="h-12 px-8">Connect wallet</Button>
                   </div>
                 )}
               </div>
 
               {validRef && !isFree && (
                 <p className="text-sm text-text-muted">
-                  Kamu membeli lewat link referral <span className="font-mono text-primary">{shortAccount(validRef)}</span>.
-                  Biayanya tidak berubah; clipper itu dapat hadiah dari dana kampanye.
+                  You&apos;re buying through the referral link of <span className="font-mono text-primary">{shortAccount(validRef)}</span>. Your price doesn&apos;t change; that clipper&apos;s reward comes from the campaign fund.
                 </p>
               )}
 
@@ -267,13 +266,13 @@ function Checkout() {
               {returnedFromWallet && !newPass && (
                 <div className="p-5 rounded-2xl border border-accent/30 bg-accent/5 flex gap-3 text-sm items-center">
                   <Loader2 className="w-5 h-5 animate-spin text-accent-ink" />
-                  <p>Transaksi terkirim. Menunggu pass tercatat di jaringan…</p>
+                  <p>Transaction sent. Waiting for the pass to be recorded on the network…</p>
                 </div>
               )}
 
               {blocked && (
                 <p className="text-accent-coral font-semibold">
-                  {ended ? "Event sudah selesai, penjualan ditutup." : soldOut ? "Tiket sudah habis." : suspended ? "Penjualan dihentikan: penyelenggara ini sedang ditangguhkan." : "Penyelenggara belum menyetor dana kampanye."}
+                  {ended ? "The event has ended, sales are closed." : soldOut ? "Tickets are sold out." : suspended ? "Sales are paused: this organizer is currently suspended." : "The organizer hasn't deposited the campaign funds."}
                 </p>
               )}
 
@@ -285,24 +284,24 @@ function Checkout() {
                 className="w-full sm:w-auto"
               >
                 {!accountId
-                  ? "Hubungkan wallet"
+                  ? "Connect wallet"
                   : phase === "sending"
-                    ? "Menunggu wallet…"
+                    ? "Waiting for wallet…"
                     : isFree
-                      ? "Ambil pass gratis"
-                      : `Bayar ${q ? fmtUsdc(q.total) : ""}`}
+                      ? "Claim free pass"
+                      : `Pay ${q ? fmtUsdc(q.total) : ""}`}
               </Button>
               <p className="text-xs text-text-muted max-w-md">
                 {isFree
-                  ? "Pass gratis hanya butuh biaya penyimpanan sekitar 0,005 NEAR (kelebihan dikembalikan)."
-                  : "Wallet akan meminta persetujuan. Kalau kontrak menolak pembelian, token dikembalikan otomatis."}
+                  ? "A free pass only costs about 0.005 NEAR in storage (any excess is refunded)."
+                  : "Your wallet will ask for approval. If the contract rejects the purchase, the tokens are refunded automatically."}
               </p>
             </div>
 
             {/* Ringkasan */}
             <div className="lg:col-span-5">
               <div className="sticky top-28 bg-surface-low border border-on-background/10 rounded-3xl p-8 space-y-7">
-                <h2 className="font-bodoni text-2xl font-black tracking-tight border-b border-on-background/10 pb-5">Ringkasan</h2>
+                <h2 className="font-bodoni text-2xl font-black tracking-tight border-b border-on-background/10 pb-5">Summary</h2>
                 <div className="space-y-4">
                   {event.image && (
                     <div className="aspect-video rounded-2xl overflow-hidden bg-background">
@@ -312,33 +311,33 @@ function Checkout() {
                   <div className="space-y-1">
                     <p className="font-bodoni text-xl font-bold leading-tight">{event.title}</p>
                     <p className="text-xs font-bold uppercase tracking-widest text-text-muted">{event.dateFull} · {event.city}</p>
-                    <p className="text-xs text-text-muted">Pass: {tier.name} · kode {event.code}</p>
+                    <p className="text-xs text-text-muted">Pass: {tier.name} · code {event.code}</p>
                   </div>
                 </div>
 
                 {isFree ? (
-                  <p className="text-sm font-semibold">Gratis</p>
+                  <p className="text-sm font-semibold">Free</p>
                 ) : q ? (
                   <div className="space-y-3 pt-5 border-t border-on-background/10 text-sm">
-                    <Line label="Harga tiket" value={fmtUsdc(q.price)} />
+                    <Line label="Ticket price" value={fmtUsdc(q.price)} />
                     {event.feeBearer === "BUYER" ? (
                       <>
-                        <Line label="Biaya layanan (3,4%)" value={fmtUsdc(q.platform_fee)} />
-                        {Number(q.promo_fee) > 0 && <Line label="Biaya promosi" value={fmtUsdc(q.promo_fee)} />}
+                        <Line label="Service fee (3.4%)" value={fmtUsdc(q.platform_fee)} />
+                        {Number(q.promo_fee) > 0 && <Line label="Promo fee" value={fmtUsdc(q.promo_fee)} />}
                       </>
                     ) : (
-                      <p className="text-xs text-text-muted">Biaya layanan ditanggung penyelenggara.</p>
+                      <p className="text-xs text-text-muted">The organizer covers the service fee.</p>
                     )}
                     <div className="pt-4 border-t border-on-background/10 flex justify-between items-end">
                       <span className="text-xs font-bold uppercase tracking-widest text-text-muted">Total</span>
                       <span className="text-right">
                         <span className="font-bodoni text-3xl font-black leading-none">{fmtUsdc(q.total)}</span>
-                        <span className="block text-xs text-text-muted mt-1">≈ {fmtIdr(q.total)} (perkiraan kurs)</span>
+                        <span className="block text-xs text-text-muted mt-1">≈ {fmtIdr(q.total)} (estimated rate)</span>
                       </span>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-text-muted">Memuat rincian harga dari kontrak…</p>
+                  <p className="text-sm text-text-muted">Loading the price breakdown from the contract…</p>
                 )}
               </div>
             </div>

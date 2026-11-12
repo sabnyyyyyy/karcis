@@ -25,8 +25,8 @@ export default function SavedPage() {
       <section className="border-b border-on-background/10 pb-8">
         <ScrollReveal>
           <div className="space-y-3">
-            <p className="text-[11px] font-semibold text-accent-ink uppercase tracking-[0.3em]">Tersimpan</p>
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-[-0.04em] leading-none">Event yang kamu incar</h1>
+            <p className="text-[11px] font-semibold text-accent-ink uppercase tracking-[0.3em]">Saved</p>
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-[-0.04em] leading-none">Events you&apos;re eyeing</h1>
           </div>
         </ScrollReveal>
       </section>
@@ -34,9 +34,9 @@ export default function SavedPage() {
       {saved.length === 0 ? (
         <div className="p-12 border border-dashed border-on-background/15 rounded-3xl text-center space-y-4 text-text-muted">
           <Heart className="w-8 h-8 mx-auto text-accent-ink" />
-          <p>Belum ada event tersimpan. Tekan ikon hati di halaman event untuk menyimpannya.</p>
+          <p>No saved events yet. Tap the heart icon on an event page to save it.</p>
           <Link href="/events" className="inline-block text-accent-ink font-semibold underline underline-offset-4">
-            Cari event
+            Find events
           </Link>
         </div>
       ) : (
@@ -54,14 +54,14 @@ export default function SavedPage() {
                     <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {e.city}</span>
                     <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {e.dateLabel}</span>
                   </div>
-                  <p className="font-bold">Mulai {fmtShort(lowestPrice(e))}</p>
+                  <p className="font-bold">From {fmtShort(lowestPrice(e))}</p>
                 </div>
               </Link>
               <button
                 onClick={() => toggle(e.id)}
                 className="w-full py-3 border-t border-on-background/10 text-xs font-semibold uppercase tracking-widest text-text-muted hover:text-accent-coral transition-colors"
               >
-                Hapus dari tersimpan
+                Remove from saved
               </button>
             </div>
           ))}

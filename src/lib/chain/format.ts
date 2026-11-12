@@ -18,7 +18,7 @@ export const unitsToIdr = (units: number | string | bigint) => unitsToUsd(units)
 export const idrToUnits = (idr: number) => usdToUnits(idr / CHAIN.idrPerUsd);
 
 const idNumber = (n: number, digits: number) =>
-  n.toLocaleString("id-ID", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  n.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
 /** "3,13 USDC" */
 export const fmtUsdc = (units: number | string | bigint) => {
@@ -31,15 +31,15 @@ export const fmtUsdc = (units: number | string | bigint) => {
 /** "Rp50.000" (perkiraan, dibulatkan ke Rp100) */
 export const fmtIdr = (units: number | string | bigint) => {
   const idr = Math.round(unitsToIdr(units) / 100) * 100;
-  return `Rp${idr.toLocaleString("id-ID")}`;
+  return `Rp${idr.toLocaleString("en-US")}`;
 };
 
 /** "3,13 USDC (≈ Rp50.000)" */
 export const fmtPrice = (units: number | string | bigint) =>
-  num(units) === 0 ? "Gratis" : `${fmtUsdc(units)} (≈ ${fmtIdr(units)})`;
+  num(units) === 0 ? "Free" : `${fmtUsdc(units)} (≈ ${fmtIdr(units)})`;
 
-/** Harga ringkas untuk kartu: "3,13 USDC" atau "Gratis" */
-export const fmtShort = (units: number | string | bigint) => (num(units) === 0 ? "Gratis" : fmtUsdc(units));
+/** Harga ringkas untuk kartu: "3,13 USDC" or "Gratis" */
+export const fmtShort = (units: number | string | bigint) => (num(units) === 0 ? "Free" : fmtUsdc(units));
 
 /** Nanodetik (string dari kontrak) -> milidetik */
 export const nsToMs = (ns: string | number | bigint) => Number(BigInt(ns) / 1_000_000n);
@@ -59,7 +59,7 @@ export const nearToYocto = (near: string | number) => {
 /** yoctoNEAR -> teks NEAR ("0,0123 NEAR") */
 export const fmtNear = (yocto: string | bigint) => {
   const n = Number(BigInt(yocto) / 10n ** 18n) / 1e6;
-  return `${n.toLocaleString("id-ID", { maximumFractionDigits: 4 })} NEAR`;
+  return `${n.toLocaleString("en-US", { maximumFractionDigits: 4 })} NEAR`;
 };
 
 export const shortAccount = (id: string) => (id.length > 22 ? `${id.slice(0, 10)}…${id.slice(-8)}` : id);

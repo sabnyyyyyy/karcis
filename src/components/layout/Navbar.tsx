@@ -12,18 +12,18 @@ import { motion, AnimatePresence } from "framer-motion";
 
 // Menu landing (anchor ke section)
 const landingLinks = [
-  { name: "Tentang", href: "/#about" },
-  { name: "Fitur", href: "/#services" },
-  { name: "Event", href: "/#events" },
-  { name: "Kontak", href: "/#contact" },
+  { name: "About", href: "/#about" },
+  { name: "Features", href: "/#services" },
+  { name: "Events", href: "/#events" },
+  { name: "Contact", href: "/#contact" },
 ];
 
 // Menu halaman lain
 const appLinks = [
-  { name: "Beranda", href: "/" },
-  { name: "Event", href: "/events" },
-  { name: "Pasar Tiket", href: "/resale" },
-  { name: "Cara Kerja", href: "/how-it-works" },
+  { name: "Home", href: "/" },
+  { name: "Events", href: "/events" },
+  { name: "Ticket Market", href: "/resale" },
+  { name: "How It Works", href: "/how-it-works" },
 ];
 
 const shortAccount = (id: string) => (id.length > 22 ? `${id.slice(0, 10)}…${id.slice(-8)}` : id);
@@ -171,7 +171,7 @@ export const Navbar = () => {
                           )}
                         >
                           {r === "buyer" ? <UserIcon className="w-3.5 h-3.5" /> : <Building2 className="w-3.5 h-3.5" />}
-                          {r === "buyer" ? "Pembeli" : "Penyelenggara"}
+                          {r === "buyer" ? "Buyer" : "Organizer"}
                         </button>
                       ))}
                     </div>
@@ -179,19 +179,19 @@ export const Navbar = () => {
 
                   <div className="p-2 space-y-0.5">
                     {isOrganizer ? (
-                      <DropdownItem href="/organizer" icon={<Building2 className="w-4 h-4" />}>Panel penyelenggara</DropdownItem>
+                      <DropdownItem href="/organizer" icon={<Building2 className="w-4 h-4" />}>Organizer dashboard</DropdownItem>
                     ) : (
                       <>
-                        <DropdownItem href="/dashboard" icon={<LayoutDashboard className="w-4 h-4" />}>Paspor saya</DropdownItem>
-                        <DropdownItem href="/dashboard/tickets" icon={<Ticket className="w-4 h-4" />}>Pass &amp; lencana</DropdownItem>
+                        <DropdownItem href="/dashboard" icon={<LayoutDashboard className="w-4 h-4" />}>My passport</DropdownItem>
+                        <DropdownItem href="/dashboard/tickets" icon={<Ticket className="w-4 h-4" />}>Passes &amp; badges</DropdownItem>
                       </>
                     )}
-                    <DropdownItem href="/dashboard/settings" icon={<Settings className="w-4 h-4" />}>Pengaturan</DropdownItem>
+                    <DropdownItem href="/dashboard/settings" icon={<Settings className="w-4 h-4" />}>Settings</DropdownItem>
                     <button
                       onClick={handleLogout}
                       className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[#5C6157] hover:text-[#E5484D] hover:bg-[#E5484D]/5 transition-all rounded-xl"
                     >
-                      <LogOut className="w-4 h-4" /> Putuskan wallet
+                      <LogOut className="w-4 h-4" /> Disconnect wallet
                     </button>
                   </div>
                 </motion.div>
@@ -203,7 +203,7 @@ export const Navbar = () => {
             href="/onboarding"
             className="flex items-center gap-3 px-6 py-2.5 rounded-full border border-[#9CFF1E] text-[13px] font-medium uppercase tracking-wide hover:bg-[#9CFF1E] hover:text-[#141414] transition-all"
           >
-            Lengkapi profil <ArrowUpRight className="w-3.5 h-3.5" />
+            Complete profile <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
         ) : (
           <button
@@ -215,7 +215,7 @@ export const Navbar = () => {
                 : "border-[#9CFF1E] text-[#141414] hover:bg-[#9CFF1E]"
             )}
           >
-            Hubungkan Wallet <ArrowUpRight className="w-3.5 h-3.5" />
+            Connect Wallet <ArrowUpRight className="w-3.5 h-3.5" />
           </button>
         )}
       </div>

@@ -48,7 +48,7 @@ export const buyPassTx = (p: { eventId: string; tierId: string; amountUnits: num
   },
   gasTgas: GAS.payToken,
   depositYocto: ONE_YOCTO,
-  label: "Bayar tiket",
+  label: "Pay for ticket",
 });
 
 /** Penyelenggara menyetor deposit kampanye */
@@ -62,7 +62,7 @@ export const fundCampaignTx = (p: { eventId: string; amountUnits: number | strin
   },
   gasTgas: GAS.payToken,
   depositYocto: ONE_YOCTO,
-  label: "Setor deposit kampanye",
+  label: "Deposit campaign funds",
 });
 
 /** Daftarkan akun di kontrak token supaya bisa menerima / memegang USDC */
@@ -72,22 +72,22 @@ export const registerTokenTx = (account: string): PreparedTx => ({
   args: { account_id: account, registration_only: true },
   gasTgas: GAS.default,
   depositYocto: TOKEN_REGISTRATION_YOCTO,
-  label: "Daftarkan akun di token USDC",
+  label: "Register account on the USDC token",
 });
 
 // ------------------------------------------------------------------ pass
 
 export const mintFreePassTx = (eventId: string, tierId: string): PreparedTx =>
-  contractTx("mint_free_pass", { event_id: eventId, tier_id: tierId }, "Ambil pass gratis", {
+  contractTx("mint_free_pass", { event_id: eventId, tier_id: tierId }, "Claim free pass", {
     gasTgas: GAS.default,
     deposit: nearToYocto("0.01"), // butuh 0,005, kelebihan dikembalikan
   });
 
 export const checkInTx = (passId: string): PreparedTx =>
-  contractTx("check_in", { pass_id: passId }, "Check-in pass", { gasTgas: GAS.checkIn });
+  contractTx("check_in", { pass_id: passId }, "Check in pass", { gasTgas: GAS.checkIn });
 
 export const addScannerTx = (eventId: string, account: string): PreparedTx =>
-  contractTx("add_scanner", { event_id: eventId, account_id: account }, "Tambah petugas scan");
+  contractTx("add_scanner", { event_id: eventId, account_id: account }, "Add scan staff");
 
 // ------------------------------------------------------------------ event
 
@@ -168,7 +168,7 @@ export function estimateCreateEventDeposit(input: NewEventInput): string {
 }
 
 export const createEventTx = (input: NewEventInput): PreparedTx =>
-  contractTx("create_event", { input }, "Buat event", {
+  contractTx("create_event", { input }, "Create event", {
     gasTgas: GAS.createEvent,
     deposit: estimateCreateEventDeposit(input),
   });
@@ -179,13 +179,13 @@ export const isValidEventCode = (code: string) => /^[A-Z0-9]{3,8}$/.test(code);
 // ------------------------------------------------------------------ kampanye
 
 export const joinCampaignTx = (eventId: string): PreparedTx =>
-  contractTx("join_campaign", { event_id: eventId }, "Ikut kampanye", {
+  contractTx("join_campaign", { event_id: eventId }, "Join campaign", {
     gasTgas: GAS.join,
     deposit: nearToYocto("0.01"),
   });
 
 export const submitClipTx = (p: { eventId: string; platform: string; url: string }): PreparedTx =>
-  contractTx("submit_clip", { event_id: p.eventId, platform: p.platform, url: p.url }, "Kirim clip", {
+  contractTx("submit_clip", { event_id: p.eventId, platform: p.platform, url: p.url }, "Submit clip", {
     gasTgas: GAS.default,
     deposit: nearToYocto("0.01"),
   });
@@ -194,25 +194,25 @@ export const reportViewsTx = (eventId: string, reports: { clipId: number; views:
   contractTx(
     "report_views",
     { event_id: eventId, reports: reports.map((r) => ({ clip_id: r.clipId, views: String(Math.max(0, Math.round(r.views))) })) },
-    "Laporkan view clip"
+    "Report clip views"
   );
 
 export const settleCampaignTx = (eventId: string): PreparedTx =>
-  contractTx("settle_campaign", { event_id: eventId }, "Selesaikan kampanye", { gasTgas: 60 });
+  contractTx("settle_campaign", { event_id: eventId }, "Settle campaign", { gasTgas: 60 });
 
 export const claimUnclaimedTx = (): PreparedTx =>
-  contractTx("claim_unclaimed", {}, "Ambil hadiah", { gasTgas: GAS.claim });
+  contractTx("claim_unclaimed", {}, "Claim reward", { gasTgas: GAS.claim });
 
 // ------------------------------------------------------------------ pasar tiket (jual ulang)
 
 /** Pasang pass di pasar tiket. Deposit 0,01 NEAR menutup penyimpanan listing; kelebihannya dikembalikan. */
 export const listPassTx = (passId: string, priceUnits: number | string): PreparedTx =>
-  contractTx("list_pass_for_resale", { pass_id: passId, price: String(priceUnits) }, "Jual pass", {
+  contractTx("list_pass_for_resale", { pass_id: passId, price: String(priceUnits) }, "Sell pass", {
     deposit: nearToYocto("0.01"),
   });
 
 export const cancelResaleTx = (passId: string): PreparedTx =>
-  contractTx("cancel_resale", { pass_id: passId }, "Batalkan penjualan");
+  contractTx("cancel_resale", { pass_id: passId }, "Cancel listing");
 
 /** Beli pass dari pasar tiket: pass lama di-burn, pembeli menerima pass baru */
 export const buyResaleTx = (p: { passId: string; amountUnits: number | string }): PreparedTx => ({
@@ -225,7 +225,7 @@ export const buyResaleTx = (p: { passId: string; amountUnits: number | string })
   },
   gasTgas: GAS.payToken,
   depositYocto: ONE_YOCTO,
-  label: "Beli pass dari pasar tiket",
+  label: "Buy pass from the ticket market",
 });
 
 // ------------------------------------------------------------------ penyelenggara (registri on-chain)
@@ -251,7 +251,7 @@ export const registerOrganizerTx = (p: OrganizerProfileInput): PreparedTx =>
         description: p.description.trim(),
       },
     },
-    "Daftar sebagai penyelenggara",
+    "Register as organizer",
     { deposit: nearToYocto("0.02") }
   );
 
@@ -268,32 +268,32 @@ export const updateOrganizerProfileTx = (p: OrganizerProfileInput): PreparedTx =
         description: p.description.trim(),
       },
     },
-    "Ubah profil penyelenggara",
+    "Update organizer profile",
     { deposit: nearToYocto("0.01") }
   );
 
 export const reportOrganizerTx = (organizer: string, reason: string): PreparedTx =>
-  contractTx("report_organizer", { organizer, reason: reason.trim() }, "Laporkan penyelenggara", {
+  contractTx("report_organizer", { organizer, reason: reason.trim() }, "Report organizer", {
     deposit: nearToYocto("0.01"),
   });
 
 /** Tindakan admin; masing-masing butuh deposit penyimpanan kecil untuk catatannya */
 export const suspendOrganizerTx = (organizer: string, reason: string): PreparedTx =>
-  contractTx("suspend_organizer", { organizer, reason: reason.trim() }, "Tangguhkan penyelenggara", { deposit: nearToYocto("0.01") });
+  contractTx("suspend_organizer", { organizer, reason: reason.trim() }, "Suspend organizer", { deposit: nearToYocto("0.01") });
 export const banOrganizerTx = (organizer: string, reason: string): PreparedTx =>
-  contractTx("ban_organizer", { organizer, reason: reason.trim() }, "Blokir penyelenggara", { deposit: nearToYocto("0.01") });
+  contractTx("ban_organizer", { organizer, reason: reason.trim() }, "Ban organizer", { deposit: nearToYocto("0.01") });
 export const reinstateOrganizerTx = (organizer: string, reason: string): PreparedTx =>
-  contractTx("reinstate_organizer", { organizer, reason: reason.trim() }, "Pulihkan penyelenggara", { deposit: nearToYocto("0.01") });
+  contractTx("reinstate_organizer", { organizer, reason: reason.trim() }, "Reinstate organizer", { deposit: nearToYocto("0.01") });
 
 // ------------------------------------------------------------------ voting
 
 export const createPollTx = (question: string, options: string[]): PreparedTx =>
-  contractTx("create_poll", { question, options }, "Buat voting", { deposit: nearToYocto("0.02") });
+  contractTx("create_poll", { question, options }, "Create poll", { deposit: nearToYocto("0.02") });
 
 export const voteTx = (pollId: string, optionIndex: number): PreparedTx =>
-  contractTx("vote", { poll_id: pollId, option_index: optionIndex }, "Beri suara");
+  contractTx("vote", { poll_id: pollId, option_index: optionIndex }, "Cast vote");
 
-export const closePollTx = (pollId: string): PreparedTx => contractTx("close_poll", { poll_id: pollId }, "Tutup voting");
+export const closePollTx = (pollId: string): PreparedTx => contractTx("close_poll", { poll_id: pollId }, "Close poll");
 
 // ------------------------------------------------------------------ testnet
 
@@ -306,5 +306,5 @@ export const mintTestUsdcTx = (account: string, amountUnits: number): PreparedTx
   args: { account_id: account, amount: String(amountUnits) },
   gasTgas: GAS.default,
   depositYocto: "0",
-  label: "Cetak USDC uji",
+  label: "Mint test USDC",
 });

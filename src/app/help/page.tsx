@@ -7,12 +7,12 @@ import { EditorialFooter } from "@/components/layout/Footer";
 import { cn } from "@/lib/utils";
 
 const faqs = [
-  { q: "Apa bedanya pass dengan tiket biasa?", a: "Pass adalah tiket digital di wallet NEAR-mu. Setelah discan di pintu masuk, ia berubah jadi lencana permanen dan menambah stempel di paspormu, jadi tidak berakhir di tempat sampah." },
-  { q: "Apakah saya perlu KTP?", a: "Tidak. Identitasmu adalah akun wallet. Kami hanya meminta nama panggilan." },
-  { q: "Bagaimana cara masuk ke acara?", a: "Buka pass di ponsel dan tunjukkan QR-nya. Penyelenggara memindainya di pintu masuk." },
-  { q: "Apa itu stempel dan level paspor?", a: "Setiap acara yang kamu hadiri memberi stempel. 1 stempel jadi Pendatang, 3 jadi Langganan, 5 jadi Penjaga Markas. Level yang lebih tinggi membuka obrolan privat, voting, dan diskon." },
-  { q: "Saya belum punya wallet NEAR.", a: "Kamu bisa membuat akun testnet gratis lewat MyNearWallet saat memilih wallet. Di testnet, saldo USDC uji bisa dicetak gratis dari halaman pembayaran." },
-  { q: "Bagaimana kalau saya penyelenggara?", a: "Hubungkan wallet, pilih Penyelenggara, lalu isi data komunitasmu. Setelah itu kamu bisa membuat event dan memindai pass di pintu masuk." },
+  { q: "How is a pass different from a regular ticket?", a: "A pass is a digital ticket in your NEAR wallet. Once scanned at the door, it becomes a permanent badge and adds a stamp to your passport, so it never ends up in the trash." },
+  { q: "Do I need an ID card?", a: "No. Your identity is your wallet account. We only ask for a nickname." },
+  { q: "How do I get into the event?", a: "Open your pass on your phone and show the QR. The organizer scans it at the door." },
+  { q: "What are stamps and passport levels?", a: "Every event you attend gives you a stamp. 1 stamp makes you a Newcomer, 3 a Regular, 5 a Base Keeper. Higher levels unlock private chat, voting, and discounts." },
+  { q: "I don't have a NEAR wallet yet.", a: "You can create a free testnet account through MyNearWallet when choosing a wallet. On testnet, test USDC can be minted for free from the checkout page." },
+  { q: "What if I'm an organizer?", a: "Connect your wallet, choose Organizer, then fill in your community details. After that you can create events and scan passes at the door." },
 ];
 
 export default function HelpPage() {
@@ -24,8 +24,8 @@ export default function HelpPage() {
         <div className="absolute inset-0 lime-grid [mask-image:linear-gradient(180deg,#000,transparent_80%)] pointer-events-none" />
         <div className="relative max-w-3xl mx-auto space-y-12">
           <div className="space-y-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#3F7D00]">Bantuan</p>
-            <h1 className="text-[40px] md:text-[64px] font-extrabold tracking-[-0.045em] leading-none">Pertanyaan umum.</h1>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#3F7D00]">Help</p>
+            <h1 className="text-[40px] md:text-[64px] font-extrabold tracking-[-0.045em] leading-none">Frequently asked questions.</h1>
           </div>
 
           <div className="divide-y divide-black/10 border-y border-black/10">
@@ -43,7 +43,7 @@ export default function HelpPage() {
           </div>
 
           <p className="text-[#5C6157]">
-            Belum terjawab? Tulis ke kami lewat <Link href="/#contact" className="text-[#3F7D00] font-semibold underline underline-offset-4">formulir kontak</Link>.
+            Still unanswered? Write to us through the <Link href="/#contact" className="text-[#3F7D00] font-semibold underline underline-offset-4">contact form</Link>.
           </p>
         </div>
       </section>

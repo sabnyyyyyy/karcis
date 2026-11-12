@@ -34,11 +34,11 @@ export function explainChainError(error: unknown): string {
     const m = raw.match(re);
     if (m?.[1]) return m[1].trim();
   }
-  if (/User rejected|rejected the request|user closed|cancelled|canceled/i.test(raw)) return "Transaksi dibatalkan di wallet.";
-  if (/does not have enough balance|NotEnoughBalance|LackBalanceForState/i.test(raw)) return "Saldo NEAR di wallet tidak cukup untuk biaya gas dan deposit.";
-  if (/not registered|storage_deposit|The account .* is not registered/i.test(raw)) return "Akun belum terdaftar di kontrak token USDC.";
-  if (/Failed to fetch|NetworkError|network/i.test(raw)) return "Tidak bisa menghubungi jaringan NEAR. Coba lagi sebentar.";
-  if (/UnknownAccount|does not exist/i.test(raw)) return "Akun tidak ditemukan di jaringan.";
+  if (/User rejected|rejected the request|user closed|cancelled|canceled/i.test(raw)) return "The transaction was canceled in the wallet.";
+  if (/does not have enough balance|NotEnoughBalance|LackBalanceForState/i.test(raw)) return "Your wallet's NEAR balance isn't enough for gas and the deposit.";
+  if (/not registered|storage_deposit|The account .* is not registered/i.test(raw)) return "The account isn't registered on the USDC token contract.";
+  if (/Failed to fetch|NetworkError|network/i.test(raw)) return "Can't reach the NEAR network. Try again in a moment.";
+  if (/UnknownAccount|does not exist/i.test(raw)) return "Account not found on the network.";
   return raw.length > 220 ? `${raw.slice(0, 220)}…` : raw;
 }
 

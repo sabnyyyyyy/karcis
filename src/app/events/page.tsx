@@ -13,7 +13,7 @@ import { fmtShort } from "@/lib/chain/format";
 import { explainChainError } from "@/lib/chain/errors";
 
 export default function EventsPage() {
-  const [category, setCategory] = useState<string>("SEMUA");
+  const [category, setCategory] = useState<string>("ALL");
   const [query, setQuery] = useState("");
   const { data: events = [], isLoading, error, refetch } = useChainEvents();
 
@@ -21,7 +21,7 @@ export default function EventsPage() {
     const q = query.trim().toLowerCase();
     return events.filter(
       (e) =>
-        (category === "SEMUA" || e.category === category) &&
+        (category === "ALL" || e.category === category) &&
         (!q ||
           e.title.toLowerCase().includes(q) ||
           e.organizer.toLowerCase().includes(q) ||
@@ -37,9 +37,9 @@ export default function EventsPage() {
         <div className="max-w-[1440px] mx-auto space-y-10">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
             <div className="space-y-2">
-              <h1 className="font-bodoni text-4xl md:text-5xl font-black tracking-tight text-primary">Cari event komunitas.</h1>
+              <h1 className="font-bodoni text-4xl md:text-5xl font-black tracking-tight text-primary">Find community events.</h1>
               <p className="text-base text-text-muted max-w-md">
-                Gigs, pameran, festival, dan workshop dari akar rumput. Setiap event menambah stempel di paspormu.
+                Gigs, expos, festivals, and workshops from the grassroots. Every event adds a stamp to your passport.
               </p>
             </div>
             <div className="relative w-full md:w-[420px]">
@@ -48,7 +48,7 @@ export default function EventsPage() {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Cari nama event, kolektif, kota, atau kode"
+                placeholder="Search by event name, collective, city, or code"
                 className="w-full bg-background border border-on-background/10 px-12 py-4 text-sm font-medium focus:border-accent outline-none transition-all rounded-full shadow-sm"
               />
             </div>
@@ -86,10 +86,10 @@ export default function EventsPage() {
 
           {error && !isLoading && (
             <div className="py-24 text-center space-y-4">
-              <p className="text-xl text-text-muted">Event belum bisa dimuat dari jaringan NEAR.</p>
+              <p className="text-xl text-text-muted">Events can&apos;t be loaded from the NEAR network.</p>
               <p className="text-sm text-text-muted">{explainChainError(error)}</p>
               <button onClick={() => refetch()} className="text-accent-ink font-bold uppercase tracking-widest text-sm underline underline-offset-4">
-                Coba lagi
+                Try again
               </button>
             </div>
           )}
@@ -107,21 +107,21 @@ export default function EventsPage() {
               {filtered.length === 0 && (
                 <div className="py-32 text-center space-y-4">
                   <p className="text-xl text-text-muted">
-                    {events.length === 0 ? "Belum ada event di kontrak. Jadilah yang pertama membuatnya." : "Belum ada event yang cocok."}
+                    {events.length === 0 ? "There are no events on the contract yet. Be the first to create one." : "No matching events yet."}
                   </p>
                   {events.length === 0 ? (
                     <Link href="/organizer/create-event" className="text-accent-ink font-bold uppercase tracking-widest text-sm underline underline-offset-4">
-                      Buat event
+                      Create event
                     </Link>
                   ) : (
                     <button
                       onClick={() => {
-                        setCategory("SEMUA");
+                        setCategory("ALL");
                         setQuery("");
                       }}
                       className="text-accent-ink font-bold uppercase tracking-widest text-sm underline underline-offset-4"
                     >
-                      Reset pencarian
+                      Reset search
                     </button>
                   )}
                 </div>
@@ -158,7 +158,7 @@ function EventCard({ event }: { event: CommunityEvent }) {
           </Badge>
           {event.campaign && (
             <Badge variant="teal" className="text-[9px] px-2 py-0.5 flex items-center gap-1">
-              <Megaphone className="w-3 h-3" /> Kampanye
+              <Megaphone className="w-3 h-3" /> Campaign
             </Badge>
           )}
         </div>
@@ -168,7 +168,7 @@ function EventCard({ event }: { event: CommunityEvent }) {
         {(ended || soldOut) && (
           <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
             <span className="px-4 py-2 rounded-full bg-background text-xs font-bold uppercase tracking-widest">
-              {ended ? "Event selesai" : "Tiket habis"}
+              {ended ? "Event ended" : "Sold out"}
             </span>
           </div>
         )}

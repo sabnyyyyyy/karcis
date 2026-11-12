@@ -23,10 +23,10 @@ export function PollsPanel({ accountId }: { accountId: string }) {
   return (
     <div className="space-y-8">
       <p className="text-sm text-text-muted max-w-2xl">
-        Hak suara dihitung dari stempel yang kamu kumpulkan di event milik penyelenggara pembuat voting (minimal {VOTE_MIN}). Suara dan hasilnya tercatat di kontrak.
+        Voting power is counted from the stamps you&apos;ve collected at events by the organizer who created the poll (at least {VOTE_MIN}). Votes and results are recorded on the contract.
       </p>
 
-      {open.length === 0 && closed.length === 0 && <p className="text-text-muted">Belum ada voting dari penyelenggara.</p>}
+      {open.length === 0 && closed.length === 0 && <p className="text-text-muted">No polls from organizers yet.</p>}
 
       <div className="grid lg:grid-cols-2 gap-5">
         {open.map((p) => (
@@ -36,7 +36,7 @@ export function PollsPanel({ accountId }: { accountId: string }) {
 
       {closed.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold uppercase tracking-widest text-text-muted">Sudah ditutup</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-widest text-text-muted">Already closed</h3>
           <div className="grid lg:grid-cols-2 gap-5">
             {closed.map((p) => (
               <PollCard key={p.id} poll={p} accountId={accountId} />
@@ -79,7 +79,7 @@ function PollCard({ poll, accountId }: { poll: ChainPoll; accountId: string }) {
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-text-muted">
           <Vote className="w-3.5 h-3.5" /> {poll.organizer_name || shortAccount(poll.creator)}
-          {poll.closed && <span className="px-2 py-0.5 rounded-full bg-black/5 normal-case tracking-normal">Ditutup</span>}
+          {poll.closed && <span className="px-2 py-0.5 rounded-full bg-black/5 normal-case tracking-normal">Closed</span>}
         </div>
         <h3 className="text-xl font-semibold tracking-[-0.02em] leading-snug">{poll.question}</h3>
       </div>
@@ -88,7 +88,7 @@ function PollCard({ poll, accountId }: { poll: ChainPoll; accountId: string }) {
         <div className="flex items-start gap-3 p-4 rounded-2xl bg-[#F5F8EE] text-sm text-text-muted">
           <Lock className="w-4 h-4 mt-0.5 shrink-0" />
           <p>
-            Butuh {VOTE_MIN} stempel dari event {poll.organizer_name || shortAccount(poll.creator)}. Kamu punya {have}.
+            Needs {VOTE_MIN} stamps from events by {poll.organizer_name || shortAccount(poll.creator)}. You have {have}.
           </p>
         </div>
       )}
@@ -125,7 +125,7 @@ function PollCard({ poll, accountId }: { poll: ChainPoll; accountId: string }) {
                 canVote ? "border-on-background/15 hover:border-[#9CFF1E] hover:bg-[#9CFF1E]/15" : "border-on-background/10 opacity-60 cursor-not-allowed"
               )}
             >
-              {sending === i ? "Menunggu wallet…" : label}
+              {sending === i ? "Waiting for wallet…" : label}
             </button>
           );
         })}
@@ -134,7 +134,7 @@ function PollCard({ poll, accountId }: { poll: ChainPoll; accountId: string }) {
       {error && <p className="text-sm text-accent-coral">{error}</p>}
 
       <p className="text-xs text-text-muted">
-        {poll.total} suara{mine !== null ? " · suaramu sudah masuk" : canVote ? " · satu akun satu suara, tidak bisa diubah" : ""}
+        {poll.total} votes{mine !== null ? " · your vote is in" : canVote ? " · one account, one vote, can't be changed" : ""}
       </p>
     </div>
   );

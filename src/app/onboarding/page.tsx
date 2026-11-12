@@ -17,10 +17,10 @@ const asOrgType = (v: string): OrganizerType =>
   (["komunitas", "kampus", "individu", "agensi"] as const).find((t) => t === v) ?? "komunitas";
 
 const orgTypes: { id: OrganizerType; label: string }[] = [
-  { id: "komunitas", label: "Komunitas / kolektif" },
-  { id: "kampus", label: "Kampus / himpunan" },
-  { id: "individu", label: "Individu" },
-  { id: "agensi", label: "Agensi / EO" },
+  { id: "komunitas", label: "Community / collective" },
+  { id: "kampus", label: "Campus / student org" },
+  { id: "individu", label: "Individual" },
+  { id: "agensi", label: "Agency / event organizer" },
 ];
 
 const field =
@@ -158,9 +158,9 @@ function Onboarding() {
         {!accountId && (
           <div className="space-y-8">
             <div className="space-y-4">
-              <h1 className="text-[40px] md:text-[56px] font-extrabold tracking-[-0.04em] leading-none">Hubungkan wallet dulu.</h1>
+              <h1 className="text-[40px] md:text-[56px] font-extrabold tracking-[-0.04em] leading-none">Connect your wallet first.</h1>
               <p className="text-[17px] text-[#141414]/60 leading-relaxed max-w-xl">
-                Akun NEAR-mu adalah identitasmu di Karcis. Tidak perlu email, password, atau KTP. Pass dan lencanamu tersimpan di akun itu.
+                Your NEAR account is your identity on Karcis. No email, password, or ID card needed. Your passes and badges are stored on that account.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -169,7 +169,7 @@ function Onboarding() {
                 className="inline-flex items-center gap-4 px-8 py-4 rounded-full text-[15px] font-semibold text-[#141414] hover:shadow-[0_0_40px_rgba(156,255,30,0.6)] transition-shadow"
                 style={{ background: "linear-gradient(180deg, #C6FF6B 0%, #9CFF1E 100%)" }}
               >
-                <Wallet className="w-4 h-4" /> Hubungkan NEAR wallet
+                <Wallet className="w-4 h-4" /> Connect NEAR wallet
               </button>
             </div>
           </div>
@@ -180,10 +180,10 @@ function Onboarding() {
           <div className="space-y-10">
             <div className="space-y-4">
               <p className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#9CFF1E]/30 text-[12px] font-semibold">
-                <Check className="w-3.5 h-3.5" /> Tersambung:<span className="font-mono">{accountId}</span>
+                <Check className="w-3.5 h-3.5" /> Connected:<span className="font-mono">{accountId}</span>
               </p>
-              <h1 className="text-[40px] md:text-[56px] font-extrabold tracking-[-0.04em] leading-none">Kamu mau jadi apa?</h1>
-              <p className="text-[17px] text-[#141414]/60">Bisa ganti atau tambah peran kapan saja dari menu akun.</p>
+              <h1 className="text-[40px] md:text-[56px] font-extrabold tracking-[-0.04em] leading-none">What do you want to be?</h1>
+              <p className="text-[17px] text-[#141414]/60">You can switch or add roles anytime from the account menu.</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-5">
@@ -193,8 +193,8 @@ function Onboarding() {
               >
                 <User className="w-10 h-10" strokeWidth={1.5} />
                 <div className="space-y-2">
-                  <h2 className="text-[28px] font-semibold tracking-[-0.02em]">Pembeli</h2>
-                  <p className="text-[#141414]/60 leading-snug">Cari event, beli pass, kumpulkan stempel, dan buka akses komunitas.</p>
+                  <h2 className="text-[28px] font-semibold tracking-[-0.02em]">Buyer</h2>
+                  <p className="text-[#141414]/60 leading-snug">Find events, buy passes, collect stamps, and unlock community access.</p>
                 </div>
               </button>
               <button
@@ -204,8 +204,8 @@ function Onboarding() {
               >
                 <Building2 className="w-10 h-10" strokeWidth={1.5} />
                 <div className="space-y-2">
-                  <h2 className="text-[28px] font-semibold tracking-[-0.02em]">Penyelenggara</h2>
-                  <p className="text-[#141414]/70 leading-snug">Buat event, scan pass di pintu masuk, dan jaga hubungan dengan pengunjungmu.</p>
+                  <h2 className="text-[28px] font-semibold tracking-[-0.02em]">Organizer</h2>
+                  <p className="text-[#141414]/70 leading-snug">Create events, scan passes at the door, and stay close to your attendees.</p>
                 </div>
               </button>
             </div>
@@ -216,10 +216,10 @@ function Onboarding() {
         {accountId && role === "buyer" && (
           <div className="space-y-8 max-w-lg">
             <div className="space-y-3">
-              <h1 className="text-[40px] md:text-[48px] font-extrabold tracking-[-0.04em] leading-none">Nama panggilanmu?</h1>
-              <p className="text-[#141414]/60">Cukup itu. Nama ini yang tampil di paspor dan obrolan komunitas.</p>
+              <h1 className="text-[40px] md:text-[48px] font-extrabold tracking-[-0.04em] leading-none">What should we call you?</h1>
+              <p className="text-[#141414]/60">That&apos;s all. This name appears on your passport and in community chat.</p>
             </div>
-            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Budi" className={field} />
+            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Alex" className={field} />
             <div className="flex items-center gap-4">
               <button
                 onClick={finishBuyer}
@@ -227,9 +227,9 @@ function Onboarding() {
                 className="inline-flex items-center gap-4 px-8 py-3.5 rounded-full text-[15px] font-semibold text-[#141414] disabled:opacity-40 transition-shadow hover:shadow-[0_0_40px_rgba(156,255,30,0.6)]"
                 style={{ background: "linear-gradient(180deg, #C6FF6B 0%, #9CFF1E 100%)" }}
               >
-                Masuk ke paspor <ArrowUpRight className="w-4 h-4" />
+                Go to my passport <ArrowUpRight className="w-4 h-4" />
               </button>
-              <button onClick={() => setRole(null)} className="text-sm text-[#141414]/50 hover:text-[#141414]">Kembali</button>
+              <button onClick={() => setRole(null)} className="text-sm text-[#141414]/50 hover:text-[#141414]">Back</button>
             </div>
           </div>
         )}
@@ -238,26 +238,26 @@ function Onboarding() {
         {accountId && role === "organizer" && (
           <form onSubmit={finishOrganizer} className="space-y-8">
             <div className="space-y-3">
-              <h1 className="text-[40px] md:text-[48px] font-extrabold tracking-[-0.04em] leading-none">Ceritakan komunitasmu.</h1>
+              <h1 className="text-[40px] md:text-[48px] font-extrabold tracking-[-0.04em] leading-none">Tell us about your community.</h1>
               <p className="text-[#141414]/60 max-w-xl">
-                Data ini tampil di halaman event-mu dan dicatat permanen di NEAR atas nama akun walletmu, supaya pembeli bisa mengecek siapa penyelenggaranya dan kasus bisa dilacak. Tidak ada dokumen atau KYC yang diminta.
+                This info appears on your event pages and is recorded permanently on NEAR under your wallet account, so buyers can check who the organizer is and issues can be traced. No documents or KYC are required.
               </p>
             </div>
 
             <div className="grid sm:grid-cols-2 gap-5">
               {!existing && (
                 <label className="space-y-2 text-[13px] font-semibold sm:col-span-2">
-                  Nama panggilanmu
-                  <input required minLength={2} value={name} onChange={(e) => setName(e.target.value)} placeholder="Budi" className={cn(field, "font-normal")} />
+                  Your nickname
+                  <input required minLength={2} value={name} onChange={(e) => setName(e.target.value)} placeholder="Alex" className={cn(field, "font-normal")} />
                 </label>
               )}
               <label className="space-y-2 text-[13px] font-semibold sm:col-span-2">
-                Nama kolektif / penyelenggara
-                <input required minLength={2} value={org.orgName} onChange={(e) => setOrg({ ...org, orgName: e.target.value })} placeholder="Kolektif Gelombang Pendek" className={cn(field, "font-normal")} />
+                Collective / organizer name
+                <input required minLength={2} value={org.orgName} onChange={(e) => setOrg({ ...org, orgName: e.target.value })} placeholder="Shortwave Collective" className={cn(field, "font-normal")} />
               </label>
 
               <div className="space-y-2 text-[13px] font-semibold sm:col-span-2">
-                Jenis
+                Type
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {orgTypes.map((t) => (
                     <button
@@ -276,16 +276,16 @@ function Onboarding() {
               </div>
 
               <label className="space-y-2 text-[13px] font-semibold">
-                Kota
+                City
                 <input required value={org.city} onChange={(e) => setOrg({ ...org, city: e.target.value })} placeholder="Bandung" className={cn(field, "font-normal")} />
               </label>
               <label className="space-y-2 text-[13px] font-semibold">
-                Kontak (email atau Instagram)
+                Contact (email or Instagram)
                 <input required value={org.contact} onChange={(e) => setOrg({ ...org, contact: e.target.value })} placeholder="@gelombangpendek" className={cn(field, "font-normal")} />
               </label>
               <label className="space-y-2 text-[13px] font-semibold sm:col-span-2">
-                Tentang komunitasmu
-                <textarea required rows={4} value={org.description} onChange={(e) => setOrg({ ...org, description: e.target.value })} placeholder="Acara apa yang biasa kalian buat, dan untuk siapa?" className={cn(field, "font-normal resize-none")} />
+                About your community
+                <textarea required rows={4} value={org.description} onChange={(e) => setOrg({ ...org, description: e.target.value })} placeholder="What kind of events do you run, and for whom?" className={cn(field, "font-normal resize-none")} />
               </label>
             </div>
 
@@ -298,9 +298,9 @@ function Onboarding() {
                 className="inline-flex items-center gap-4 px-8 py-3.5 rounded-full text-[15px] font-semibold text-[#141414] transition-shadow hover:shadow-[0_0_40px_rgba(156,255,30,0.6)] disabled:opacity-60"
                 style={{ background: "linear-gradient(180deg, #C6FF6B 0%, #9CFF1E 100%)" }}
               >
-                {busy ? "Menunggu wallet…" : onchain.data ? "Buka panel penyelenggara" : "Daftar on-chain & buka panel"} <ArrowUpRight className="w-4 h-4" />
+                {busy ? "Waiting for wallet…" : onchain.data ? "Open organizer dashboard" : "Register on-chain & open dashboard"} <ArrowUpRight className="w-4 h-4" />
               </button>
-              {!existing && <button type="button" onClick={() => setRole(null)} className="text-sm text-[#141414]/50 hover:text-[#141414]">Kembali</button>}
+              {!existing && <button type="button" onClick={() => setRole(null)} className="text-sm text-[#141414]/50 hover:text-[#141414]">Back</button>}
             </div>
           </form>
         )}

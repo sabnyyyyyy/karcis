@@ -31,9 +31,9 @@ export const OrganizerGuard = ({ children }: { children: React.ReactNode }) => {
 
   if (!accountId) {
     return (
-      <Gate title="Hubungkan wallet dulu" text="Panel penyelenggara hanya bisa dibuka setelah wallet tersambung.">
+      <Gate title="Connect your wallet first" text="The organizer dashboard opens only after your wallet is connected.">
         <button onClick={signIn} className="px-8 py-3.5 rounded-full bg-[#9CFF1E] text-[#141414] font-semibold">
-          Hubungkan Wallet
+          Connect Wallet
         </button>
       </Gate>
     );
@@ -43,9 +43,9 @@ export const OrganizerGuard = ({ children }: { children: React.ReactNode }) => {
 
   if (!isOrganizer) {
     return (
-      <Gate title="Kamu belum jadi penyelenggara" text="Tambahkan peran penyelenggara ke akunmu. Cukup isi data komunitasmu.">
+      <Gate title="You're not an organizer yet" text="Add the organizer role to your account. Just fill in your community details.">
         <Link href="/onboarding?role=organizer" className="px-8 py-3.5 rounded-full bg-[#9CFF1E] text-[#141414] font-semibold">
-          Jadi penyelenggara
+          Become an organizer
         </Link>
       </Gate>
     );
@@ -74,16 +74,16 @@ export const OrganizerGuard = ({ children }: { children: React.ReactNode }) => {
     };
     return (
       <Gate
-        title="Daftarkan penyelenggara on-chain"
-        text="Data penyelenggara dicatat permanen di kontrak NEAR atas nama akun walletmu, supaya pembeli bisa mengecek dan kasus bisa dilacak. Wajib sebelum membuat event."
+        title="Register the organizer on-chain"
+        text="Organizer details are recorded permanently on the NEAR contract under your wallet account, so buyers can check them and issues can be traced. Required before creating events."
       >
         {o ? (
           <button onClick={register} disabled={registering} className="px-8 py-3.5 rounded-full bg-[#9CFF1E] text-[#141414] font-semibold disabled:opacity-60">
-            {registering ? "Menunggu wallet…" : `Daftarkan "${o.orgName}"`}
+            {registering ? "Waiting for wallet…" : `Register "${o.orgName}"`}
           </button>
         ) : (
           <Link href="/onboarding?role=organizer" className="px-8 py-3.5 rounded-full bg-[#9CFF1E] text-[#141414] font-semibold">
-            Isi data penyelenggara
+            Fill in organizer details
           </Link>
         )}
         {regError && <p className="text-[#E5484D] text-sm max-w-md">{regError}</p>}
@@ -95,11 +95,11 @@ export const OrganizerGuard = ({ children }: { children: React.ReactNode }) => {
     const last = [...onchain.data.cases].reverse().find((c) => c.kind === "SUSPEND" || c.kind === "BAN");
     return (
       <Gate
-        title={onchain.data.status === "BANNED" ? "Akun penyelenggara diblokir" : "Akun penyelenggara ditangguhkan"}
-        text={`Kamu tidak bisa membuat event atau voting, dan penjualan tiket event-mu dihentikan.${last ? ` Alasan di catatan on-chain: ${last.reason}` : ""}`}
+        title={onchain.data.status === "BANNED" ? "Organizer account banned" : "Organizer account suspended"}
+        text={`You can't create events or polls, and ticket sales for your events are stopped.${last ? ` Reason in the on-chain record: ${last.reason}` : ""}`}
       >
         <Link href="/help" className="px-8 py-3.5 rounded-full border border-[#141414]/20 font-semibold hover:bg-[#141414] hover:text-white transition-colors">
-          Hubungi tim Karcis
+          Contact the Karcis team
         </Link>
       </Gate>
     );

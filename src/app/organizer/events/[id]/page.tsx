@@ -47,8 +47,8 @@ function Manage() {
   if (!event || event.ownerAccount !== accountId) {
     return (
       <main data-nav-theme="light" className="min-h-screen bg-white text-[#141414] pt-16 flex flex-col items-center justify-center gap-5 text-center px-6">
-        <h1 className="text-[32px] font-extrabold tracking-[-0.03em]">{event ? "Ini bukan event milikmu." : "Event tidak ditemukan."}</h1>
-        <Link href="/organizer" className="px-8 py-3.5 rounded-full bg-[#9CFF1E] font-semibold">Kembali ke panel</Link>
+        <h1 className="text-[32px] font-extrabold tracking-[-0.03em]">{event ? "This event isn't yours." : "Event not found."}</h1>
+        <Link href="/organizer" className="px-8 py-3.5 rounded-full bg-[#9CFF1E] font-semibold">Back to dashboard</Link>
       </main>
     );
   }
@@ -67,7 +67,7 @@ function Manage() {
       if (key === "fund") {
         const used = readSuccessValue(outcome);
         if (used === "0" || used === 0) {
-          setMessage({ ok: false, text: "Kontrak menolak setoran dan dana dikembalikan. Pastikan jumlahnya sesuai deposit yang dibutuhkan." });
+          setMessage({ ok: false, text: "The contract rejected the deposit and the funds were returned. Make sure the amount matches the required deposit." });
           return;
         }
       }
@@ -84,7 +84,7 @@ function Manage() {
     const txs: PreparedTx[] = [];
     if (registered.data === false && accountId) txs.push(registerTokenTx(accountId));
     txs.push(fundCampaignTx({ eventId: event.id, amountUnits: terms.depositRequired }));
-    void run("fund", txs, "Deposit kampanye tersetor. Penjualan pass berbayar sekarang dibuka.");
+    void run("fund", txs, "Campaign deposit received. Paid pass sales are now open.");
   };
 
   const mint = () => {
@@ -92,14 +92,14 @@ function Manage() {
     const txs: PreparedTx[] = [];
     if (registered.data === false) txs.push(registerTokenTx(accountId));
     txs.push(mintTestUsdcTx(accountId, usdToUnits(1000)));
-    void run("mint", txs, "USDC uji masuk ke walletmu.");
+    void run("mint", txs, "Test USDC landed in your wallet.");
   };
 
   const addScanner = (e: React.FormEvent) => {
     e.preventDefault();
     const who = scanner.trim();
     if (!who) return;
-    void run("scanner", [addScannerTx(event.id, who)], `${who} sekarang bisa scan pass event ini.`).then(() => setScanner(""));
+    void run("scanner", [addScannerTx(event.id, who)], `${who} can now scan passes for this event.`).then(() => setScanner(""));
   };
 
   return (
@@ -109,26 +109,26 @@ function Manage() {
         <div className="relative max-w-4xl mx-auto space-y-12">
           <div className="space-y-4">
             <Link href="/organizer" className="inline-flex items-center gap-1 text-sm text-[#5C6157] hover:text-[#141414]">
-              <ChevronLeft className="w-4 h-4" /> Panel
+              <ChevronLeft className="w-4 h-4" /> Dashboard
             </Link>
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div className="space-y-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#3F7D00]">Kelola event · {event.code}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#3F7D00]">Manage event · {event.code}</p>
                 <h1 className="text-[34px] md:text-[48px] font-extrabold tracking-[-0.04em] leading-none">{event.title}</h1>
-                <p className="text-[#5C6157]">{event.dateFull} · {event.venue}, {event.city}{ended ? " · selesai" : ""}</p>
+                <p className="text-[#5C6157]">{event.dateFull} · {event.venue}, {event.city}{ended ? " · ended" : ""}</p>
               </div>
               <Link href={`/events/${event.id}`} className="inline-flex items-center gap-2 text-sm font-semibold text-[#3F7D00] underline underline-offset-4">
-                Lihat halaman publik <ExternalLink className="w-3.5 h-3.5" />
+                View public page <ExternalLink className="w-3.5 h-3.5" />
               </Link>
             </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { l: "Terjual", v: `${event.sold}/${event.capacity}` },
-              { l: "Sudah hadir", v: String(event.checkedIn) },
-              { l: "Stempel", v: `+${event.stamps}` },
-              { l: "Biaya layanan", v: event.feeBearer === "BUYER" ? "Pembeli" : "Penyelenggara" },
+              { l: "Sold", v: `${event.sold}/${event.capacity}` },
+              { l: "Checked in", v: String(event.checkedIn) },
+              { l: "Stamps", v: `+${event.stamps}` },
+              { l: "Service fee", v: event.feeBearer === "BUYER" ? "Buyer" : "Organizer" },
             ].map((m) => (
               <div key={m.l} className="p-5 rounded-3xl bg-[#F5F8EE] border border-black/5">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-[#5C6157]">{m.l}</p>
@@ -142,29 +142,29 @@ function Manage() {
           )}
 
           {/* Identitas NFT */}
-          <Block title="Identitas NFT pass">
+          <Block title="Pass NFT identity">
             <dl className="grid sm:grid-cols-3 gap-4 text-sm">
-              <Info label="Contoh ID" value={`${event.code}-0001`} mono />
-              <Info label="Nama NFT" value={event.nftName || event.title} />
-              <Info label="Kontrak" value={CHAIN.contractId} mono />
+              <Info label="Example ID" value={`${event.code}-0001`} mono />
+              <Info label="NFT name" value={event.nftName || event.title} />
+              <Info label="Contract" value={CHAIN.contractId} mono />
             </dl>
           </Block>
 
           {/* Kampanye */}
           {terms ? (
-            <Block title="Kampanye clipper">
+            <Block title="Clipper campaign">
               <div className="flex items-start gap-3 text-sm text-[#5C6157]">
                 <Megaphone className="w-5 h-5 mt-0.5 text-[#3F7D00] shrink-0" />
                 <p>
-                  Clip dibayar {fmtUsdc(terms.clipRatePerMillion)} ({fmtIdr(terms.clipRatePerMillion)}) per 1 juta view dan {fmtUsdc(terms.referralReward)} ({fmtIdr(terms.referralReward)}) per penjualan referral. Dana cair setelah event selesai.
+                  Clip payout {fmtUsdc(terms.clipRatePerMillion)} ({fmtIdr(terms.clipRatePerMillion)}) per 1 million views and {fmtUsdc(terms.referralReward)} ({fmtIdr(terms.referralReward)}) per referral sale. Funds are released after the event ends.
                 </p>
               </div>
 
               {!terms.funded ? (
                 <div className="p-6 rounded-3xl border-2 border-[#9CFF1E] bg-[#9CFF1E]/10 space-y-4">
-                  <p className="font-semibold">Setor deposit untuk membuka penjualan</p>
+                  <p className="font-semibold">Deposit to open sales</p>
                   <p className="text-sm text-[#5C6157]">
-                    Deposit {fmtUsdc(terms.depositRequired)} (≈ {fmtIdr(terms.depositRequired)}), 10% dari anggaran promosi. Sisanya tidak terpakai dikembalikan setelah kampanye selesai. Saldo {CHAIN.stableSymbol} kamu: <b>{fmtUsdc(have)}</b>.
+                    Deposit {fmtUsdc(terms.depositRequired)} (≈ {fmtIdr(terms.depositRequired)}), 10% of the promo budget. The unused remainder is returned after the campaign ends. Your {CHAIN.stableSymbol} balance: <b>{fmtUsdc(have)}</b>.
                   </p>
                   <div className="flex flex-wrap gap-3">
                     <button
@@ -172,7 +172,7 @@ function Manage() {
                       disabled={busy !== null || have < terms.depositRequired}
                       className="px-7 py-3 rounded-full bg-[#141414] text-white font-semibold hover:bg-[#9CFF1E] hover:text-[#141414] transition-colors disabled:opacity-40"
                     >
-                      {busy === "fund" ? "Menunggu wallet…" : `Setor ${fmtUsdc(terms.depositRequired)}`}
+                      {busy === "fund" ? "Waiting for wallet…" : `Deposit ${fmtUsdc(terms.depositRequired)}`}
                     </button>
                     {canMintTestUsdc() && have < terms.depositRequired && (
                       <button
@@ -180,43 +180,43 @@ function Manage() {
                         disabled={busy !== null}
                         className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-[#141414]/20 font-semibold hover:bg-[#9CFF1E] hover:border-[#9CFF1E] transition-colors disabled:opacity-40"
                       >
-                        <Coins className="w-4 h-4" /> {busy === "mint" ? "Menunggu wallet…" : "Cetak 1.000 USDC uji"}
+                        <Coins className="w-4 h-4" /> {busy === "mint" ? "Waiting for wallet…" : "Mint 1,000 test USDC"}
                       </button>
                     )}
                   </div>
                 </div>
               ) : (
                 <div className="grid sm:grid-cols-3 gap-4 text-sm">
-                  <Info label="Deposit tersetor" value={c ? fmtUsdc(c.deposit) : "…"} />
-                  <Info label="Biaya promosi terkumpul" value={c ? fmtUsdc(c.collected) : "…"} />
-                  <Info label="Status" value={terms.settled ? "Sudah diselesaikan" : terms.viewsReported ? "View sudah dilaporkan" : ended ? "Menunggu laporan view" : "Berjalan"} />
+                  <Info label="Deposit received" value={c ? fmtUsdc(c.deposit) : "…"} />
+                  <Info label="Promo fees collected" value={c ? fmtUsdc(c.collected) : "…"} />
+                  <Info label="Status" value={terms.settled ? "Settled" : terms.viewsReported ? "Views reported" : ended ? "Waiting for view report" : "In progress"} />
                 </div>
               )}
 
               {c && (
                 <div className="grid md:grid-cols-2 gap-5">
                   <div className="p-5 rounded-3xl border border-black/10 space-y-3">
-                    <p className="font-semibold">Clip ({c.clips.length})</p>
-                    {c.clips.length === 0 && <p className="text-sm text-[#5C6157]">Belum ada clip dikirim.</p>}
+                    <p className="font-semibold">Clips ({c.clips.length})</p>
+                    {c.clips.length === 0 && <p className="text-sm text-[#5C6157]">No clips submitted yet.</p>}
                     <ul className="space-y-2 text-sm">
                       {c.clips.map((cl) => (
                         <li key={cl.id} className="flex justify-between gap-3">
                           <a href={cl.url} target="_blank" rel="noreferrer" className="truncate underline underline-offset-4">
                             {cl.platform} · {shortAccount(cl.clipper)}
                           </a>
-                          <span className="tabular-nums text-[#5C6157] shrink-0">{cl.views === null ? "belum dihitung" : `${Number(cl.views).toLocaleString("id-ID")} view`}</span>
+                          <span className="tabular-nums text-[#5C6157] shrink-0">{cl.views === null ? "not counted yet" : `${Number(cl.views).toLocaleString("en-US")} views`}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
                   <div className="p-5 rounded-3xl border border-black/10 space-y-3">
-                    <p className="font-semibold">Penjualan referral</p>
-                    {c.referrals.length === 0 && <p className="text-sm text-[#5C6157]">Belum ada penjualan lewat referral.</p>}
+                    <p className="font-semibold">Referral sales</p>
+                    {c.referrals.length === 0 && <p className="text-sm text-[#5C6157]">No referral sales yet.</p>}
                     <ul className="space-y-2 text-sm">
                       {c.referrals.map((r) => (
                         <li key={r.account} className="flex justify-between gap-3">
                           <span className="truncate font-mono">{shortAccount(r.account)}</span>
-                          <span className="tabular-nums text-[#5C6157]">{r.sales} tiket</span>
+                          <span className="tabular-nums text-[#5C6157]">{r.sales} tickets</span>
                         </li>
                       ))}
                     </ul>
@@ -227,29 +227,29 @@ function Manage() {
               {terms.funded && ended && !terms.settled && (
                 <div className="p-5 rounded-3xl border border-black/10 space-y-3">
                   <p className="text-sm text-[#5C6157]">
-                    Event sudah selesai. Setelah verifier melaporkan jumlah view (atau 14 hari berlalu tanpa laporan), kampanye bisa diselesaikan: clipper dibayar, sisa deposit kembali ke walletmu.
+                    The event has ended. Once the verifier reports the view counts (or 14 days pass without a report), the campaign can be settled: clippers get paid and the remaining deposit returns to your wallet.
                   </p>
                   <button
-                    onClick={() => run("settle", [settleCampaignTx(event.id)], "Kampanye diselesaikan. Hadiah dikirim ke para clipper.")}
+                    onClick={() => run("settle", [settleCampaignTx(event.id)], "Campaign settled. Rewards were sent to the clippers.")}
                     disabled={busy !== null}
                     className="px-7 py-3 rounded-full bg-[#141414] text-white font-semibold hover:bg-[#9CFF1E] hover:text-[#141414] transition-colors disabled:opacity-40"
                   >
-                    {busy === "settle" ? "Menunggu wallet…" : "Selesaikan kampanye"}
+                    {busy === "settle" ? "Waiting for wallet…" : "Settle campaign"}
                   </button>
                 </div>
               )}
             </Block>
           ) : (
-            <Block title="Kampanye clipper">
-              <p className="text-sm text-[#5C6157]">Event ini tidak memakai kampanye, jadi pembeli hanya membayar harga tiket (plus biaya layanan jika ditanggung pembeli).</p>
+            <Block title="Clipper campaign">
+              <p className="text-sm text-[#5C6157]">This event doesn&apos;t use a campaign, so buyers only pay the ticket price (plus the service fee if the buyer covers it).</p>
             </Block>
           )}
 
           {/* Petugas scan */}
-          <Block title="Petugas scan">
-            <p className="text-sm text-[#5C6157]">Kamu sendiri selalu bisa scan. Tambahkan akun NEAR lain untuk membantu di pintu masuk.</p>
+          <Block title="Scan staff">
+            <p className="text-sm text-[#5C6157]">You can always scan yourself. Add another NEAR account to help at the door.</p>
             <ul className="flex flex-wrap gap-2">
-              {event.scanners.length === 0 && <li className="text-sm text-[#5C6157]">Belum ada petugas tambahan.</li>}
+              {event.scanners.length === 0 && <li className="text-sm text-[#5C6157]">No extra staff yet.</li>}
               {event.scanners.map((s) => (
                 <li key={s}>
                   <a href={accountUrl(s)} target="_blank" rel="noreferrer" className="px-3 py-1.5 rounded-full bg-[#F5F8EE] border border-black/5 text-sm font-mono">
@@ -262,7 +262,7 @@ function Manage() {
               <input
                 value={scanner}
                 onChange={(e) => setScanner(e.target.value)}
-                placeholder="akun-petugas.testnet"
+                placeholder="staff-account.testnet"
                 className="flex-1 min-w-0 rounded-2xl border border-[#141414]/15 px-4 py-3 text-[15px] font-mono outline-none focus:border-[#9CFF1E] focus:ring-2 focus:ring-[#9CFF1E]/40"
               />
               <button
@@ -270,11 +270,11 @@ function Manage() {
                 disabled={busy !== null}
                 className="inline-flex items-center gap-2 px-5 rounded-2xl bg-[#141414] text-white text-sm font-semibold hover:bg-[#9CFF1E] hover:text-[#141414] transition-colors disabled:opacity-40"
               >
-                <UserPlus className="w-4 h-4" /> Tambah
+                <UserPlus className="w-4 h-4" /> Add
               </button>
             </form>
             <Link href="/organizer/scan" className="inline-flex items-center gap-2 text-sm font-semibold text-[#3F7D00] underline underline-offset-4">
-              <ScanLine className="w-4 h-4" /> Buka pemindai
+              <ScanLine className="w-4 h-4" /> Open scanner
             </Link>
           </Block>
         </div>

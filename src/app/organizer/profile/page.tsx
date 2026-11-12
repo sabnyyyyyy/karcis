@@ -21,11 +21,11 @@ const orgTypes: OrganizerType[] = ["komunitas", "kampus", "individu", "agensi"];
 const asOrgType = (v: string): OrganizerType => orgTypes.find((t) => t === v) ?? "komunitas";
 
 const kindLabel = {
-  REPORT: "Laporan",
-  SUSPEND: "Ditangguhkan",
-  BAN: "Diblokir",
-  REINSTATE: "Dipulihkan",
-  PROFILEUPDATE: "Profil diubah",
+  REPORT: "Report",
+  SUSPEND: "Suspended",
+  BAN: "Banned",
+  REINSTATE: "Reinstated",
+  PROFILEUPDATE: "Profile updated",
 } as const;
 
 export default function OrganizerProfilePage() {
@@ -68,7 +68,7 @@ function ProfileView() {
       addOrganizerRole(accountId, { orgName: form.name.trim(), orgType: form.orgType, city: form.city.trim(), contact: form.contact.trim(), description: form.description.trim() });
       await refetch();
       setEditing(false);
-      setMsg({ ok: true, text: "Profil diperbarui di kontrak. Nilai lamanya tetap tercatat di riwayat." });
+      setMsg({ ok: true, text: "Profile updated on the contract. The old values remain in the history." });
     } catch (err) {
       setMsg({ ok: false, text: explainChainError(err) });
     } finally {
@@ -88,7 +88,7 @@ function ProfileView() {
               {o.name[0]?.toUpperCase()}
             </div>
             <div className="space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#3F7D00]">Profil penyelenggara</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#3F7D00]">Organizer profile</p>
               <h1 className="text-4xl md:text-5xl font-extrabold tracking-[-0.04em] leading-none">{o.name}</h1>
             </div>
           </div>
@@ -99,10 +99,10 @@ function ProfileView() {
 
               <div className="grid sm:grid-cols-2 gap-4">
                 {[
-                  { icon: Building2, label: "Jenis", value: o.org_type },
-                  { icon: MapPin, label: "Kota", value: o.city },
-                  { icon: AtSign, label: "Kontak", value: o.contact || "-" },
-                  { icon: Calendar, label: "Terdaftar on-chain", value: new Date(nsToMs(chainOrg.registered_at)).toLocaleDateString("id-ID", { month: "long", year: "numeric" }) },
+                  { icon: Building2, label: "Type", value: o.org_type },
+                  { icon: MapPin, label: "City", value: o.city },
+                  { icon: AtSign, label: "Contact", value: o.contact || "-" },
+                  { icon: Calendar, label: "Registered on-chain", value: new Date(nsToMs(chainOrg.registered_at)).toLocaleDateString("en-US", { month: "long", year: "numeric" }) },
                 ].map((f) => (
                   <div key={f.label} className="p-5 rounded-2xl bg-[#F5F8EE] border border-black/5 space-y-1">
                     <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-[#5C6157]">
@@ -114,15 +114,15 @@ function ProfileView() {
               </div>
 
               <p className="text-sm text-[#5C6157]">
-                Event besar sering pindah kota? Perbarui profil kapan saja. Event yang sudah dibuat tidak berubah, dan perubahan profil tercatat di riwayat supaya tetap transparan.
+                Do your big events move cities often? Update your profile anytime. Events you&apos;ve already created don&apos;t change, and profile changes are recorded in the history to keep things transparent.
               </p>
 
               <div className="flex flex-wrap items-center gap-6">
                 <button onClick={() => setEditing(true)} className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#141414] text-white font-semibold hover:bg-[#9CFF1E] hover:text-[#141414] transition-colors">
-                  <Pencil className="w-4 h-4" /> Ubah profil
+                  <Pencil className="w-4 h-4" /> Edit profile
                 </button>
                 <Link href="/organizer" className="text-[#3F7D00] font-semibold underline underline-offset-4">
-                  Kembali ke panel
+                  Back to dashboard
                 </Link>
               </div>
             </>
@@ -130,11 +130,11 @@ function ProfileView() {
             <form onSubmit={save} className="space-y-6">
               <div className="grid sm:grid-cols-2 gap-5">
                 <label className="space-y-2 text-[13px] font-semibold sm:col-span-2">
-                  Nama kolektif / penyelenggara
+                  Collective / organizer name
                   <input required minLength={2} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={cn(field, "font-normal")} />
                 </label>
                 <div className="space-y-2 text-[13px] font-semibold sm:col-span-2">
-                  Jenis
+                  Type
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {orgTypes.map((t) => (
                       <button
@@ -152,23 +152,23 @@ function ProfileView() {
                   </div>
                 </div>
                 <label className="space-y-2 text-[13px] font-semibold">
-                  Kota
+                  City
                   <input required value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className={cn(field, "font-normal")} />
                 </label>
                 <label className="space-y-2 text-[13px] font-semibold">
-                  Kontak
+                  Contact
                   <input required value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} className={cn(field, "font-normal")} />
                 </label>
                 <label className="space-y-2 text-[13px] font-semibold sm:col-span-2">
-                  Tentang komunitasmu
+                  About your community
                   <textarea required rows={4} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={cn(field, "font-normal resize-none")} />
                 </label>
               </div>
               <div className="flex items-center gap-4">
                 <button type="submit" disabled={busy} className="px-8 py-3.5 rounded-full bg-[#9CFF1E] font-semibold disabled:opacity-60">
-                  {busy ? "Menunggu wallet…" : "Simpan di kontrak"}
+                  {busy ? "Waiting for wallet…" : "Save on contract"}
                 </button>
-                <button type="button" onClick={() => setEditing(false)} className="text-sm text-[#141414]/50 hover:text-[#141414]">Batal</button>
+                <button type="button" onClick={() => setEditing(false)} className="text-sm text-[#141414]/50 hover:text-[#141414]">Cancel</button>
               </div>
             </form>
           )}
@@ -177,11 +177,11 @@ function ProfileView() {
 
           {history.length > 0 && (
             <div className="space-y-3">
-              <h2 className="text-xl font-semibold tracking-[-0.02em]">Riwayat perubahan profil</h2>
+              <h2 className="text-xl font-semibold tracking-[-0.02em]">Profile change history</h2>
               <ul className="space-y-2 text-sm">
                 {history.map((c, i) => (
                   <li key={i} className="p-4 rounded-2xl bg-[#F5F8EE]">
-                    <b>{kindLabel[c.kind]}</b> · {new Date(nsToMs(c.at)).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                    <b>{kindLabel[c.kind]}</b> · {new Date(nsToMs(c.at)).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}
                     <p className="text-[#5C6157]">{c.reason}</p>
                   </li>
                 ))}

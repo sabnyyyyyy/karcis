@@ -11,9 +11,9 @@ export interface Room {
 }
 
 export const ROOMS: Room[] = [
-  { key: "umum", title: "Obrolan umum", desc: "Terbuka untuk semua pemegang lencana.", perk: "chat-umum" },
-  { key: "privat", title: "Ruang langganan", desc: "Khusus pengunjung yang sudah 3 stempel.", perk: "chat-privat" },
-  { key: "kreator", title: "Ruang kreator", desc: "Diskusi privat para pembuat karya.", perk: "prioritas" },
+  { key: "umum", title: "General chat", desc: "Open to all badge holders.", perk: "chat-umum" },
+  { key: "privat", title: "Regulars room", desc: "Only for attendees with 3 stamps.", perk: "chat-privat" },
+  { key: "kreator", title: "Creators' room", desc: "Private discussion among makers.", perk: "prioritas" },
 ];
 
 export const perkMin = (perk: PerkKey) => PERKS.find((p) => p.key === perk)?.min ?? 0;

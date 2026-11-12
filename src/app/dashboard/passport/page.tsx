@@ -57,8 +57,8 @@ export default function PassportPage() {
       <section className="border-b border-on-background/10 pb-8">
         <ScrollReveal>
           <div className="space-y-3">
-            <p className="text-[11px] font-semibold text-accent-ink uppercase tracking-[0.3em]">Paspor</p>
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-[-0.04em] leading-none">Stempel yang kamu kumpulkan</h1>
+            <p className="text-[11px] font-semibold text-accent-ink uppercase tracking-[0.3em]">Passport</p>
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-[-0.04em] leading-none">Stamps you&apos;ve collected</h1>
           </div>
         </ScrollReveal>
       </section>
@@ -70,11 +70,11 @@ export default function PassportPage() {
             <div className="absolute -right-16 -top-16 w-56 h-56 rounded-full bg-[#9CFF1E]/20 blur-[80px]" />
             <div className="relative flex items-center justify-between">
               <span className="font-[family-name:var(--font-logo)] text-xl font-black italic uppercase tracking-tighter text-[#9CFF1E]">Karcis</span>
-              <span className="text-[11px] uppercase tracking-[0.3em] text-white/50">Paspor</span>
+              <span className="text-[11px] uppercase tracking-[0.3em] text-white/50">Passport</span>
             </div>
 
             <div className="relative space-y-1">
-              <p className="text-[11px] uppercase tracking-widest text-white/40">Pemegang</p>
+              <p className="text-[11px] uppercase tracking-widest text-white/40">Holder</p>
               <p className="text-3xl font-bold tracking-[-0.03em]">{profile.name}</p>
               <p className="text-xs font-mono text-white/50 break-all">{accountId}</p>
             </div>
@@ -85,13 +85,13 @@ export default function PassportPage() {
                   <p className="text-[11px] uppercase tracking-widest text-white/40">Level</p>
                   <p className="text-2xl font-bold text-[#9CFF1E]">{level.name}</p>
                 </div>
-                <p className="text-sm text-white/60">{stamps} stempel</p>
+                <p className="text-sm text-white/60">{stamps} stamps</p>
               </div>
               <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
                 <div className="h-full rounded-full bg-[#9CFF1E] transition-all duration-700" style={{ width: `${pct}%` }} />
               </div>
               <p className="text-xs text-white/50">
-                {next ? `${next.min - stamps} stempel lagi menuju ${next.name}.` : "Kamu sudah di level tertinggi."}
+                {next ? `${next.min - stamps} more stamps to ${next.name}.` : "You're at the top level."}
               </p>
             </div>
           </div>
@@ -100,10 +100,10 @@ export default function PassportPage() {
         <ScrollReveal delay={0.1}>
           <div className="rounded-[32px] border border-on-background/10 bg-white p-6 md:p-8 h-full space-y-5">
             <div className="flex items-end justify-between">
-              <h2 className="text-xl font-semibold">Lencana ({badges.length})</h2>
+              <h2 className="text-xl font-semibold">Badges ({badges.length})</h2>
               {waiting.length > 0 && (
                 <Link href="/dashboard/tickets" className="text-sm text-accent-ink font-semibold underline underline-offset-4">
-                  {waiting.length} pass menunggu scan
+                  {waiting.length} passes awaiting scan
                 </Link>
               )}
             </div>
@@ -119,7 +119,7 @@ export default function PassportPage() {
             </div>
             {badges.length === 0 && (
               <p className="text-sm text-text-muted">
-                Belum ada stempel. Datangi acara dan tunjukkan QR pass-mu di pintu masuk. <Link href="/events" className="text-accent-ink font-semibold underline underline-offset-4">Cari event</Link>
+                No stamps yet. Go to an event and show your pass QR at the door. <Link href="/events" className="text-accent-ink font-semibold underline underline-offset-4">Find events</Link>
               </p>
             )}
           </div>
@@ -128,15 +128,15 @@ export default function PassportPage() {
 
       {/* Level */}
       <section className="space-y-6">
-        <h2 className="text-2xl font-semibold tracking-[-0.02em]">Tangga level</h2>
+        <h2 className="text-2xl font-semibold tracking-[-0.02em]">Level ladder</h2>
         <LevelLadder stamps={stamps} />
       </section>
 
       {/* Akses komunitas */}
       <section className="space-y-6">
         <div className="space-y-1">
-          <h2 className="text-2xl font-semibold tracking-[-0.02em]">Akses komunitas</h2>
-          <p className="text-sm text-text-muted">Terbuka otomatis sesuai stempelmu. Klik perk yang terbuka untuk memakainya.</p>
+          <h2 className="text-2xl font-semibold tracking-[-0.02em]">Community access</h2>
+          <p className="text-sm text-text-muted">Unlocked automatically based on your stamps. Click an unlocked perk to use it.</p>
         </div>
         <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {PERKS.map((perk) => {
@@ -154,11 +154,11 @@ export default function PassportPage() {
                   <p className="font-semibold">{perk.title}</p>
                   <p className="text-sm text-text-muted leading-snug">{perk.desc}</p>
                   <p className={cn("flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest", open ? "text-accent-ink" : "text-text-muted")}>
-                    {open ? <><Check className="w-3.5 h-3.5" /> Terbuka</> : <><Lock className="w-3.5 h-3.5" /> Butuh {perk.min} stempel</>}
+                    {open ? <><Check className="w-3.5 h-3.5" /> Unlocked</> : <><Lock className="w-3.5 h-3.5" /> Needs {perk.min} stamps</>}
                   </p>
                   {open && (
                     <Link href={`/dashboard/community?tab=${perkTab[perk.key]}`} className="inline-flex items-center gap-1 text-sm font-semibold text-accent-ink underline underline-offset-4">
-                      Buka <ChevronRight className="w-3.5 h-3.5" />
+                      Open <ChevronRight className="w-3.5 h-3.5" />
                     </Link>
                   )}
                 </div>
@@ -170,9 +170,9 @@ export default function PassportPage() {
 
       {/* Riwayat kehadiran */}
       <section className="space-y-6">
-        <h2 className="text-2xl font-semibold tracking-[-0.02em]">Riwayat kehadiran</h2>
+        <h2 className="text-2xl font-semibold tracking-[-0.02em]">Attendance history</h2>
         {badges.length === 0 && waiting.length === 0 ? (
-          <p className="text-text-muted">Belum ada riwayat.</p>
+          <p className="text-text-muted">No history yet.</p>
         ) : (
           <div className="rounded-3xl border border-on-background/10 bg-white divide-y divide-on-background/10 overflow-hidden">
             {[...waiting, ...badges].map((p) => (
@@ -185,10 +185,10 @@ export default function PassportPage() {
                 </div>
                 <div className="flex items-center gap-4 shrink-0">
                   {p.status === "USED" ? (
-                    <span className="text-[11px] font-semibold uppercase tracking-widest text-accent-ink">+{p.stamps} stempel</span>
+                    <span className="text-[11px] font-semibold uppercase tracking-widest text-accent-ink">+{p.stamps} stamps</span>
                   ) : (
                     <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-text-muted">
-                      <ScanLine className="w-3.5 h-3.5" /> Menunggu scan
+                      <ScanLine className="w-3.5 h-3.5" /> Waiting for scan
                     </span>
                   )}
                   <ChevronRight className="w-4 h-4 text-text-muted group-hover:translate-x-1 transition-transform" />

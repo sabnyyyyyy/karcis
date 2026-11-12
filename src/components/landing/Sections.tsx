@@ -17,7 +17,12 @@ import {
   ArrowRight,
   Asterisk,
   Ticket,
+  ScanLine,
   Stamp,
+  Award,
+  Repeat,
+  Megaphone,
+  ShieldCheck,
   MessagesSquare,
   Vote,
 } from "lucide-react";
@@ -36,27 +41,27 @@ const INK = "#141414";
 /* ------------------------------------------------------------------ */
 
 const aboutText =
-  "KARCIS mengubah tiket event komunitas jadi paspor digital. Setiap kedatangan dicap, setiap stempel membuka akses baru: obrolan eksklusif, hak suara, dan reward, tanpa perlu menunjukkan KTP.";
+  "KARCIS turns community event tickets into a digital passport. Every visit is stamped, and every stamp unlocks new access: exclusive chat, voting rights, and rewards, no ID card needed.";
 
 // kata yang diberi aksen serif italic lime
-const EMPHASIS = new Set(["paspor", "digital.", "stempel", "KTP."]);
+const EMPHASIS = new Set(["digital", "passport.", "stamp", "ID"]);
 
 const pillars = [
-  { no: "01", title: "Stempel kehadiran", desc: "Scan di pintu masuk, setiap kedatangan tercap di paspormu." },
-  { no: "02", title: "Obrolan eksklusif", desc: "Ruang ngobrol yang hanya terbuka untuk mereka yang benar-benar hadir." },
-  { no: "03", title: "Hak suara", desc: "Pilih bintang tamu dan arah acara berikutnya lewat voting." },
-  { no: "04", title: "Reward otomatis", desc: "Diskon merchandise dan lencana permanen, tanpa perlu menunjukkan KTP." },
+  { no: "01", title: "Attendance stamps", desc: "Scanned at the door, every visit is stamped in your passport." },
+  { no: "02", title: "Exclusive chat", desc: "A chat space open only to people who actually showed up." },
+  { no: "03", title: "Voting rights", desc: "Vote on guest stars and the direction of the next event." },
+  { no: "04", title: "Automatic rewards", desc: "Merch discounts and permanent badges, no ID card needed." },
 ];
 
 const eventKinds = [
-  "Gigs lokal",
-  "Pameran kampus",
-  "Festival kreator",
-  "Zine fair",
+  "Local gigs",
+  "Campus expos",
+  "Creator festivals",
+  "Zine fairs",
   "Open mic",
-  "Workshop",
-  "Screening",
-  "Pasar kreator",
+  "Workshops",
+  "Screenings",
+  "Creator markets",
 ];
 
 function Word({
@@ -92,7 +97,7 @@ function StampBadge() {
           <path id="stampCircle" d="M100 100 m-78 0 a78 78 0 1 1 156 0 a78 78 0 1 1 -156 0" />
         </defs>
         <text fill="currentColor" fontSize="11.5" fontWeight="500" className="uppercase">
-          <textPath href="#stampCircle" textLength="486" lengthAdjust="spacing">Karcis · Stempel kehadiran · Paspor komunitas ·</textPath>
+          <textPath href="#stampCircle" textLength="486" lengthAdjust="spacing">Karcis · Attendance stamps · Community passport ·</textPath>
         </text>
       </svg>
       <div className="absolute inset-[26%] rounded-full border border-[#9CFF1E]/40 flex items-center justify-center">
@@ -143,7 +148,7 @@ export function About() {
       <div className="relative px-6 md:px-12 max-w-[1280px] mx-auto">
         {/* label + garis tipis */}
         <div className="flex items-center gap-5 mb-14 md:mb-20">
-          <span className="text-[12px] tracking-[0.22em] uppercase text-white/55">(01) Tentang kami</span>
+          <span className="text-[12px] tracking-[0.22em] uppercase text-white/55">(01) About us</span>
           <span className="h-px flex-1 bg-white/12" />
         </div>
 
@@ -199,27 +204,66 @@ export function About() {
 const services = [
   {
     title: "Smart pass",
-    desc: "Tiket digital di ponsel. Scan sekali di pintu masuk, selesai.",
+    who: "Attendees",
+    desc: "A digital ticket in your NEAR wallet. No ID card, no paper.",
     icon: Ticket,
     href: "/how-it-works",
   },
   {
-    title: "Lencana permanen",
-    desc: "Tiket jadi lencana setelah acara, tersimpan selamanya di paspormu.",
+    title: "Door scan",
+    who: "Organizers",
+    desc: "Scan the pass QR from a phone. Attendance is recorded instantly and becomes a stamp.",
+    icon: ScanLine,
+    href: "/how-it-works",
+  },
+  {
+    title: "Permanent badge",
+    who: "Attendees",
+    desc: "After the event, your ticket becomes a badge kept forever in your passport.",
     icon: Stamp,
-    href: "/how-it-works",
+    href: "/dashboard/tickets",
   },
   {
-    title: "Ruang komunitas",
-    desc: "Obrolan eksklusif sesama pengunjung yang benar-benar hadir.",
+    title: "Passport & levels",
+    who: "Attendees",
+    desc: "Level up from Guest to Base Keeper, automatically from your stamp count.",
+    icon: Award,
+    href: "/dashboard/passport",
+  },
+  {
+    title: "Community space",
+    who: "Attendees",
+    desc: "Exclusive chat with fellow attendees who actually showed up.",
     icon: MessagesSquare,
-    href: "/how-it-works",
+    href: "/dashboard/community",
   },
   {
-    title: "Voting & reward",
-    desc: "Pilih bintang tamu, dapat diskon merch.",
+    title: "Voting & rewards",
+    who: "Attendees",
+    desc: "Pick the next guest star and get merch discounts.",
     icon: Vote,
-    href: "/how-it-works",
+    href: "/dashboard/community?tab=voting",
+  },
+  {
+    title: "Ticket market",
+    who: "Attendees",
+    desc: "Can't make it? Sell your pass to someone else, all recorded on the contract.",
+    icon: Repeat,
+    href: "/resale",
+  },
+  {
+    title: "Promo campaign",
+    who: "Creators",
+    desc: "Make promo videos and share a referral link. Paid per view and per ticket sold.",
+    icon: Megaphone,
+    href: "/dashboard/campaigns",
+  },
+  {
+    title: "Registered organizers",
+    who: "Everyone",
+    desc: "Registered on NEAR. Problem organizers can be reported and have their sales stopped.",
+    icon: ShieldCheck,
+    href: "/events",
   },
 ];
 
@@ -239,21 +283,21 @@ export function Services() {
       <div className="relative px-6 md:px-12 max-w-[1280px] mx-auto">
         {/* label + garis tipis */}
         <div className="flex items-center gap-5 mb-14 md:mb-20">
-          <span className="text-[12px] tracking-[0.22em] uppercase text-[#141414]/55">(02) Fitur</span>
+          <span className="text-[12px] tracking-[0.22em] uppercase text-[#141414]/55">(02) Features</span>
           <span className="h-px flex-1 bg-[#141414]/12" />
         </div>
 
         {/* judul + pengantar */}
         <div className="grid md:grid-cols-12 gap-8 md:gap-10 items-end mb-16 md:mb-24">
           <h2 className="md:col-span-8 text-[38px] sm:text-[48px] md:text-[68px] font-light leading-[1.06] tracking-[-0.035em]">
-            Semua yang komunitasmu{" "}
+            Everything your community{" "}
             <span className="font-[family-name:var(--font-logo)] italic font-normal text-[#3F7D00] tracking-[-0.01em]">
-              butuhkan
+              needs
             </span>
             .
           </h2>
           <p className="md:col-span-4 text-[15.5px] leading-relaxed text-[#141414]/55 max-w-[38ch]">
-            Supaya pengunjung tetap dekat, dari pintu masuk sampai setelah acara bubar.
+            From the door to after the event wraps, for attendees, creators, and organizers.
           </p>
         </div>
 
@@ -271,7 +315,7 @@ export function Services() {
               >
                 <Link
                   href={sv.href}
-                  className="group grid md:grid-cols-12 items-center gap-y-4 gap-x-6 py-8 md:py-11 -mx-4 px-4 md:-mx-8 md:px-8 border-t border-[#141414]/12 transition-colors duration-500 hover:bg-[#9CFF1E]/[0.16]"
+                  className="group grid md:grid-cols-12 items-center gap-y-4 gap-x-6 py-7 md:py-9 -mx-4 px-4 md:-mx-8 md:px-8 border-t border-[#141414]/12 transition-colors duration-500 hover:bg-[#9CFF1E]/[0.16]"
                 >
                   <span className="md:col-span-1 text-[12px] tracking-[0.2em] text-[#3F7D00]">
                     {String(i + 1).padStart(2, "0")}
@@ -279,7 +323,10 @@ export function Services() {
                   <h3 className="md:col-span-5 font-[family-name:var(--font-logo)] italic text-[38px] md:text-[52px] leading-[1.02] tracking-[-0.015em] transition-transform duration-500 group-hover:translate-x-2">
                     {sv.title}
                   </h3>
-                  <p className="md:col-span-4 text-[15px] leading-relaxed text-[#141414]/55 max-w-[36ch]">{sv.desc}</p>
+                  <div className="md:col-span-4 max-w-[36ch] space-y-2">
+                    <span className="block text-[10.5px] tracking-[0.22em] uppercase text-[#3F7D00]">{sv.who}</span>
+                    <p className="text-[15px] leading-relaxed text-[#141414]/55">{sv.desc}</p>
+                  </div>
                   <div className="md:col-span-2 flex md:justify-end">
                     <span className="relative inline-flex items-center justify-center w-14 h-14 rounded-full border border-[#141414]/18 transition-all duration-500 group-hover:bg-[#141414] group-hover:border-[#141414] group-hover:text-[#9CFF1E] group-hover:rotate-[-8deg]">
                       <Icon className="w-6 h-6" strokeWidth={1.25} />
@@ -296,7 +343,7 @@ export function Services() {
             href="#contact"
             className="group inline-flex items-center gap-4 pl-7 pr-5 py-3.5 rounded-full border border-[#141414]/20 text-[13px] font-medium uppercase tracking-[0.14em] transition-colors duration-300 hover:bg-[#141414] hover:text-white hover:border-[#141414]"
           >
-            Ayo ngobrol
+            Let&apos;s talk
             <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#9CFF1E] text-[#141414]">
               <ArrowUpRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </span>
@@ -336,28 +383,28 @@ export function Events() {
       <div className="relative px-6 md:px-12 max-w-[1280px] mx-auto">
         {/* label + garis tipis */}
         <div className="flex items-center gap-5 mb-14 md:mb-20">
-          <span className="text-[12px] tracking-[0.22em] uppercase text-white/55">(03) Event</span>
+          <span className="text-[12px] tracking-[0.22em] uppercase text-white/55">(03) Events</span>
           <span className="h-px flex-1 bg-white/12" />
         </div>
 
         {/* judul + pengantar + panah */}
         <div className="grid md:grid-cols-12 gap-8 md:gap-10 items-end mb-14 md:mb-20">
           <h2 className="md:col-span-8 text-[38px] sm:text-[48px] md:text-[68px] font-light leading-[1.06] tracking-[-0.035em]">
-            Event{" "}
+            Latest{" "}
             <span className="font-[family-name:var(--font-logo)] italic font-normal text-[#9CFF1E] tracking-[-0.01em]">
-              terbaru
+              events
             </span>
             .
           </h2>
           <div className="md:col-span-4 space-y-6">
             <p className="text-[15.5px] leading-relaxed text-white/55 max-w-[38ch]">
-              Gigs, pameran, dan festival dari akar rumput. Setiap event menambah stempel di paspormu.
+              Grassroots gigs, expos, and festivals. Every event adds a stamp to your passport.
             </p>
             <div className="flex gap-3">
-              <button onClick={() => scrollBy(-1)} aria-label="Sebelumnya" className={arrowBtn}>
+              <button onClick={() => scrollBy(-1)} aria-label="Previous" className={arrowBtn}>
                 <ArrowLeft className="w-4 h-4" />
               </button>
-              <button onClick={() => scrollBy(1)} aria-label="Berikutnya" className={arrowBtn}>
+              <button onClick={() => scrollBy(1)} aria-label="Next" className={arrowBtn}>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -379,10 +426,10 @@ export function Events() {
 
           {!isLoading && events.length === 0 && (
             <div className="w-full py-16 text-center text-white/60 space-y-3">
-              <p>{error ? "Event belum bisa dimuat dari jaringan NEAR." : "Belum ada event di kontrak."}</p>
+              <p>{error ? "Events can't be loaded from the NEAR network." : "There are no events on the contract yet."}</p>
               {!error && (
                 <Link href="/organizer/create-event" className="inline-block font-semibold text-[#9CFF1E] underline underline-offset-4">
-                  Jadi yang pertama membuat event
+                  Be the first to create one
                 </Link>
               )}
             </div>
@@ -426,10 +473,10 @@ export function Events() {
                   <div className="flex items-center justify-between pt-3 border-t border-white/12 text-[13px]">
                     <span className="text-white/55">{e.dateLabel}</span>
                     {ended ? (
-                      <span className="text-white/40">Selesai</span>
+                      <span className="text-white/40">Ended</span>
                     ) : (
                       <span className="text-white/55">
-                        Mulai <span className="text-[#9CFF1E] font-medium">{fmtShort(lowestPrice(e))}</span>
+                        From <span className="text-[#9CFF1E] font-medium">{fmtShort(lowestPrice(e))}</span>
                       </span>
                     )}
                   </div>
@@ -444,7 +491,7 @@ export function Events() {
             href="/events"
             className="group inline-flex items-center gap-4 pl-7 pr-5 py-3.5 rounded-full border border-white/20 text-[13px] font-medium uppercase tracking-[0.14em] transition-colors duration-300 hover:bg-white hover:text-[#141414] hover:border-white"
           >
-            Lihat semua event
+            View all events
             <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#9CFF1E] text-[#141414]">
               <ArrowUpRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </span>
@@ -460,9 +507,9 @@ export function Events() {
 /* ------------------------------------------------------------------ */
 
 const passportPoints = [
-  "Satu pass untuk masuk, lalu jadi lencana permanen",
-  "Level naik otomatis dari jumlah stempel",
-  "Perk terbuka tanpa perlu menunjukkan KTP",
+  "One pass to get in, then it becomes a permanent badge",
+  "Levels go up automatically from your stamp count",
+  "Perks unlock without showing an ID card",
 ];
 
 const passportStamps = [
@@ -585,11 +632,11 @@ function PassportCard() {
           <div className="rounded-[20px] border border-white/10 p-7 md:p-8 space-y-8">
             <div className="flex items-start justify-between">
               <span className="font-[family-name:var(--font-logo)] italic text-[30px] leading-none text-[#9CFF1E]">Karcis</span>
-              <span className="text-[10px] tracking-[0.3em] uppercase text-white/45 pt-1.5">Paspor komunitas</span>
+              <span className="text-[10px] tracking-[0.3em] uppercase text-white/45 pt-1.5">Community passport</span>
             </div>
 
             <div className="space-y-2">
-              <p className="text-[10px] uppercase tracking-[0.28em] text-white/40">Pemegang</p>
+              <p className="text-[10px] uppercase tracking-[0.28em] text-white/40">Holder</p>
               <p className="font-[family-name:var(--font-logo)] italic text-[34px] leading-[1.15] tracking-[-0.01em]">budi.testnet</p>
             </div>
 
@@ -601,8 +648,8 @@ function PassportCard() {
 
             <div className="space-y-3">
               <div className="flex justify-between text-[10px] uppercase tracking-[0.2em] text-white/55">
-                <span>Level · Langganan</span>
-                <span>3 / 5 stempel</span>
+                <span>Level · Regular</span>
+                <span>3 / 5 stamps</span>
               </div>
               <div className="grid grid-cols-5 gap-1.5">
                 {[0, 1, 2, 3, 4].map((n) => (
@@ -627,14 +674,14 @@ function PassportCard() {
                   </motion.span>
                 ))}
               </div>
-              <p className="text-[12.5px] leading-relaxed text-white/50">2 stempel lagi untuk akses ruang diskusi kreator.</p>
+              <p className="text-[12.5px] leading-relaxed text-white/50">2 more stamps to unlock the creators&apos; discussion room.</p>
             </div>
 
             {/* baris ala paspor: hiasan */}
             <p aria-hidden className="font-mono text-[10px] leading-[1.5] tracking-[0.18em] text-white/20 break-all select-none">
               {"P<KRC<<BUDI<TESTNET<<<<<<<<<<<"}
               <br />
-              {"0003<<STEMPEL<<LANGGANAN<<<<<<"}
+              {"0003<<STAMPS<<REGULAR<<<<<<<<<"}
             </p>
           </div>
 
@@ -673,21 +720,21 @@ export function Passport() {
       <div className="relative px-6 md:px-12 max-w-[1280px] mx-auto">
         {/* label + garis tipis */}
         <div className="flex items-center gap-5 mb-14 md:mb-20">
-          <span className="text-[12px] tracking-[0.22em] uppercase text-[#141414]/55">(04) Paspor</span>
+          <span className="text-[12px] tracking-[0.22em] uppercase text-[#141414]/55">(04) Passport</span>
           <span className="h-px flex-1 bg-[#141414]/12" />
         </div>
 
         <div className="grid lg:grid-cols-12 gap-16 lg:gap-10 items-center">
           <div className="lg:col-span-7 space-y-10">
             <h2 className="text-[38px] sm:text-[48px] md:text-[68px] font-light leading-[1.06] tracking-[-0.035em]">
-              Paspor stempel{" "}
+              A stamp passport{" "}
               <span className="font-[family-name:var(--font-logo)] italic font-normal text-[#3F7D00] tracking-[-0.01em]">
-                di dompetmu
+                in your wallet
               </span>
               .
             </h2>
             <p className="text-[16px] text-[#141414]/55 leading-relaxed max-w-[44ch]">
-              Setiap acara yang kamu datangi tercatat sebagai stempel. Semakin banyak, semakin dekat kamu dengan komunitas.
+              Every event you attend is recorded as a stamp. The more you collect, the closer you get to the community.
             </p>
             <ol className="max-w-lg border-b border-[#141414]/12">
               {passportPoints.map((pt, i) => (
@@ -731,21 +778,21 @@ export function Contact() {
       <div className="relative px-6 md:px-12 max-w-[1280px] mx-auto">
         {/* label + garis tipis */}
         <div className="flex items-center gap-5 mb-14 md:mb-20">
-          <span className="text-[12px] tracking-[0.22em] uppercase text-white/55">(05) Kontak</span>
+          <span className="text-[12px] tracking-[0.22em] uppercase text-white/55">(05) Contact</span>
           <span className="h-px flex-1 bg-white/12" />
         </div>
 
         <div className="grid lg:grid-cols-12 gap-14 lg:gap-10">
           <div className="lg:col-span-5 space-y-8">
             <h2 className="text-[38px] sm:text-[48px] md:text-[68px] font-light leading-[1.06] tracking-[-0.035em]">
-              Ayo{" "}
+              Let&apos;s{" "}
               <span className="font-[family-name:var(--font-logo)] italic font-normal text-[#9CFF1E] tracking-[-0.01em]">
-                ngobrol
+                talk
               </span>
               .
             </h2>
             <p className="text-[15.5px] leading-relaxed text-white/55 max-w-[38ch]">
-              Penyelenggara gigs, pameran, atau festival? Ceritakan komunitasmu dan kami bantu pasang pass-nya.
+              Running gigs, expos, or festivals? Tell us about your community and we&apos;ll help set up your pass.
             </p>
           </div>
 
@@ -759,29 +806,29 @@ export function Contact() {
           >
             <div className="grid sm:grid-cols-2 gap-9">
               <label className={labelCls}>
-                Nama
-                <input required name="name" placeholder="Nama kamu" className={field} />
+                Name
+                <input required name="name" placeholder="Your name" className={field} />
               </label>
               <label className={labelCls}>
                 Email
-                <input required type="email" name="email" placeholder="kamu@komunitas.com" className={field} />
+                <input required type="email" name="email" placeholder="you@community.com" className={field} />
               </label>
             </div>
             <label className={labelCls}>
-              Pesan
-              <textarea required name="message" rows={3} placeholder="Ceritakan event atau komunitasmu" className={cn(field, "resize-none")} />
+              Message
+              <textarea required name="message" rows={3} placeholder="Tell us about your event or community" className={cn(field, "resize-none")} />
             </label>
             <div className="flex flex-wrap items-center gap-5">
               <button
                 type="submit"
                 className="group inline-flex items-center gap-4 pl-8 pr-3 py-3 rounded-full bg-[#9CFF1E] text-[#141414] text-[13px] font-semibold uppercase tracking-[0.14em] transition-shadow hover:shadow-[0_0_40px_rgba(156,255,30,0.45)]"
               >
-                Kirim
+                Send
                 <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-[#141414] text-[#9CFF1E]">
                   <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </span>
               </button>
-              {sent && <span className="text-[14px] text-white/55">Terima kasih! (demo: pesan belum dikirim ke mana pun)</span>}
+              {sent && <span className="text-[14px] text-white/55">Thank you! (demo: the message isn&apos;t sent anywhere)</span>}
             </div>
           </form>
         </div>
@@ -801,28 +848,28 @@ export function LandingFooter() {
         <div className="space-y-4 max-w-xs">
           <span className="font-[family-name:var(--font-logo)] text-3xl font-black italic uppercase tracking-tighter" style={{ color: LIME }}>Karcis</span>
           <p className="text-[14px] text-white/50 leading-relaxed">
-            Tiket event komunitas yang tidak berakhir di tempat sampah. Setiap kedatangan jadi stempel di paspormu.
+            Community event tickets that don&apos;t end up in the trash. Every visit becomes a stamp in your passport.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-12 text-[14px]">
           <nav className="flex flex-col gap-3 text-white/70">
-            <Link href="/events" className="hover:text-white">Semua event</Link>
-            <Link href="/resale" className="hover:text-white">Pasar tiket</Link>
-            <Link href="/how-it-works" className="hover:text-white">Cara kerja</Link>
-            <Link href="/help" className="hover:text-white">Bantuan</Link>
+            <Link href="/events" className="hover:text-white">All events</Link>
+            <Link href="/resale" className="hover:text-white">Ticket market</Link>
+            <Link href="/how-it-works" className="hover:text-white">How it works</Link>
+            <Link href="/help" className="hover:text-white">Help</Link>
           </nav>
           <nav className="flex flex-col gap-3 text-white/70">
-            <Link href="/dashboard" className="hover:text-white">Paspor saya</Link>
-            <Link href="/organizer" className="hover:text-white">Untuk penyelenggara</Link>
-            <Link href="/onboarding" className="hover:text-white">Mulai</Link>
+            <Link href="/dashboard" className="hover:text-white">My passport</Link>
+            <Link href="/organizer" className="hover:text-white">For organizers</Link>
+            <Link href="/onboarding" className="hover:text-white">Get started</Link>
           </nav>
         </div>
       </div>
       <div className="max-w-[1280px] mx-auto mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row justify-between gap-2 text-[12px] text-white/40">
-        <span>© 2026 Karcis. Dibuat untuk komunitas.</span>
+        <span>© 2026 Karcis. Made for communities.</span>
         <span className="inline-flex items-center gap-2">
           <NearLogo className="h-4 w-4 text-white/70" />
-          Dibangun di NEAR Protocol (testnet)
+          Built on NEAR Protocol (testnet)
         </span>
       </div>
     </footer>

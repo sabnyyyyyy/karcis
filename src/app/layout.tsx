@@ -19,9 +19,9 @@ const logoFont = Bodoni_Moda({
 });
 
 export const metadata: Metadata = {
-  title: "Karcis | Tiketmu jadi paspor komunitas",
+  title: "Karcis | Your ticket becomes a community passport",
   description:
-    "Tiket event komunitas yang tidak berakhir di tempat sampah. Scan di pintu masuk, kumpulkan stempel, buka akses ke obrolan, voting, dan reward komunitas.",
+    "Community event tickets that don't end up in the trash. Scan at the door, collect stamps, and unlock chat, voting, and community rewards.",
 };
 
 export default function RootLayout({
@@ -30,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className={`${outfit.variable} ${logoFont.variable} h-full antialiased`}>
+    <html lang="en" className={`${outfit.variable} ${logoFont.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-background text-text-main">
         <AppProviders>
           <Navbar />

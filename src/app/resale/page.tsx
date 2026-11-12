@@ -41,12 +41,12 @@ function Market() {
       <section className="pt-32 pb-12 px-6 md:px-12 border-b border-on-background/5 bg-surface-low">
         <div className="max-w-[1440px] mx-auto space-y-4">
           <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.3em] text-accent-ink">
-            <Repeat className="w-4 h-4" /> Pasar tiket
+            <Repeat className="w-4 h-4" /> Ticket market
           </p>
-          <h1 className="font-bodoni text-4xl md:text-5xl font-black tracking-tight text-primary">Tiket dari yang tidak jadi hadir.</h1>
+          <h1 className="font-bodoni text-4xl md:text-5xl font-black tracking-tight text-primary">Tickets from people who can&apos;t make it.</h1>
           {eventFilter && (
             <Link href="/resale" className="inline-block text-sm font-semibold text-accent-ink underline underline-offset-4">
-              Tampilkan semua event
+              Show all events
             </Link>
           )}
         </div>
@@ -64,10 +64,10 @@ function Market() {
 
           {!loading && rows.length === 0 && (
             <div className="py-24 text-center space-y-4">
-              <p className="text-xl text-text-muted">Belum ada tiket yang dijual ulang.</p>
-              <p className="text-sm text-text-muted">Tidak jadi hadir? Buka pass-mu di koleksi, lalu pilih “Jual tiket”.</p>
+              <p className="text-xl text-text-muted">No tickets have been resold yet.</p>
+              <p className="text-sm text-text-muted">Can&apos;t make it? Open your pass in your collection, then choose “Sell ticket”.</p>
               <Link href="/dashboard/tickets" className="inline-block text-accent-ink font-bold uppercase tracking-widest text-sm underline underline-offset-4">
-                Pass saya
+                My passes
               </Link>
             </div>
           )}
@@ -108,7 +108,7 @@ function ListingCard({ listing, event }: { listing: ChainListing; event: Communi
       if (isBuy) {
         const used = readSuccessValue(outcome);
         if (used === "0" || used === 0) {
-          setMsg({ ok: false, text: "Kontrak menolak pembelian ini dan uangmu dikembalikan. Mungkin tiketnya baru saja terjual atau dibatalkan." });
+          setMsg({ ok: false, text: "The contract rejected this purchase and your money was refunded. The ticket may have just been sold or canceled." });
           return;
         }
       }
@@ -125,7 +125,7 @@ function ListingCard({ listing, event }: { listing: ChainListing; event: Communi
     const txs: PreparedTx[] = [];
     if (registered.data === false) txs.push(registerTokenTx(accountId));
     txs.push(buyResaleTx({ passId: listing.pass_id, amountUnits: price }));
-    void run(txs, "Pembelian berhasil. Pass baru sudah ada di koleksimu.", true);
+    void run(txs, "Purchase complete. The new pass is in your collection.", true);
   };
 
   return (
@@ -133,7 +133,7 @@ function ListingCard({ listing, event }: { listing: ChainListing; event: Communi
       <div className="relative h-44 bg-surface-lowest">
         {event.image && <img src={event.image} alt={event.title} className="w-full h-full object-cover" />}
         {off > 0 && (
-          <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-accent text-[#141414] text-[11px] font-bold">Hemat {off}%</span>
+          <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-accent text-[#141414] text-[11px] font-bold">Save {off}%</span>
         )}
       </div>
 
@@ -148,17 +148,17 @@ function ListingCard({ listing, event }: { listing: ChainListing; event: Communi
             <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {event.dateLabel}</span>
           </p>
           <p className="text-xs text-text-muted">
-            {tier?.name ?? listing.tier_id} · dijual {mine ? "olehmu" : `oleh ${shortAccount(listing.seller)}`}
+            {tier?.name ?? listing.tier_id} · listed {mine ? "olehmu" : `by ${shortAccount(listing.seller)}`}
           </p>
         </div>
 
         <div className="flex items-end justify-between pt-3 border-t border-on-background/5">
           <div>
             <p className="font-bodoni text-2xl font-black leading-none">{fmtUsdc(price)}</p>
-            <p className="text-xs text-text-muted mt-1">≈ {fmtIdr(price)} · harga asli {fmtUsdc(face)}</p>
+            <p className="text-xs text-text-muted mt-1">≈ {fmtIdr(price)} · original price {fmtUsdc(face)}</p>
           </div>
           <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-accent-ink">
-            <ShieldCheck className="w-3.5 h-3.5" /> Pass baru
+            <ShieldCheck className="w-3.5 h-3.5" /> New pass
           </span>
         </div>
 
@@ -166,14 +166,14 @@ function ListingCard({ listing, event }: { listing: ChainListing; event: Communi
           <Button
             variant="outline"
             disabled={busy}
-            onClick={() => run([cancelResaleTx(listing.pass_id)], "Penjualan dibatalkan.", false)}
+            onClick={() => run([cancelResaleTx(listing.pass_id)], "Listing canceled.", false)}
             className="w-full border border-on-background/20"
           >
-            {busy ? "Menunggu wallet…" : "Batalkan penjualan"}
+            {busy ? "Waiting for wallet…" : "Cancel listing"}
           </Button>
         ) : (
           <Button variant="lime" disabled={busy || (!!accountId && !enough)} onClick={buy} className="w-full">
-            {!accountId ? "Hubungkan wallet" : busy ? "Menunggu wallet…" : enough ? `Beli ${fmtUsdc(price)}` : `Saldo ${fmtUsdc(balance.data ?? 0)} kurang`}
+            {!accountId ? "Connect wallet" : busy ? "Waiting for wallet…" : enough ? `Buy ${fmtUsdc(price)}` : `Balance ${fmtUsdc(balance.data ?? 0)} is too low`}
           </Button>
         )}
 

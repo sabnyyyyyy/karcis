@@ -44,10 +44,10 @@ export default function CampaignsPage() {
       <section className="border-b border-on-background/10 pb-8">
         <ScrollReveal>
           <div className="space-y-3">
-            <p className="text-[11px] font-bold text-accent-ink uppercase tracking-[0.3em]">Kampanye</p>
-            <h1 className="font-bodoni text-4xl md:text-5xl font-black tracking-tight">Promosikan event, dapat hadiah</h1>
+            <p className="text-[11px] font-bold text-accent-ink uppercase tracking-[0.3em]">Campaigns</p>
+            <h1 className="font-bodoni text-4xl md:text-5xl font-black tracking-tight">Promote events, earn rewards</h1>
             <p className="text-text-muted max-w-xl">
-              Ikut kampanye penyelenggara, buat video promosi, dan bagikan link referralmu. Kamu dibayar per 1 juta view dan per tiket yang terjual lewat linkmu. Dana cair setelah event selesai.
+              Join an organizer&apos;s campaign, make promo videos, and share your referral link. You&apos;re paid per 1 million views and per ticket sold through your link. Funds are released after the event ends.
             </p>
           </div>
         </ScrollReveal>
@@ -58,7 +58,7 @@ export default function CampaignsPage() {
           <div className="flex items-center gap-3">
             <Wallet className="w-5 h-5 text-accent-ink" />
             <p className="text-sm">
-              <b>{fmtUsdc(claimable)}</b> menunggu diambil dari kontrak.
+              <b>{fmtUsdc(claimable)}</b> waiting to be claimed from the contract.
             </p>
           </div>
           <button
@@ -66,19 +66,19 @@ export default function CampaignsPage() {
             disabled={claiming}
             className="px-6 py-3 rounded-full bg-primary text-on-primary text-sm font-semibold hover:bg-accent hover:text-[#141414] transition-colors disabled:opacity-50"
           >
-            {claiming ? "Menunggu wallet…" : "Ambil ke wallet"}
+            {claiming ? "Waiting for wallet…" : "Claim to wallet"}
           </button>
         </div>
       )}
       {error && <p className="text-sm text-accent-coral">{error}</p>}
 
       <section className="space-y-6">
-        <h2 className="font-bodoni text-2xl font-bold tracking-tight">Kampanye yang kamu ikuti</h2>
+        <h2 className="font-bodoni text-2xl font-bold tracking-tight">Campaigns you&apos;ve joined</h2>
         {joined.isLoading ? (
           <div className="h-32 rounded-3xl bg-surface-low animate-pulse" />
         ) : joinedIds.length === 0 ? (
           <div className="p-10 border border-dashed border-on-background/15 rounded-3xl text-center text-text-muted">
-            Kamu belum ikut kampanye mana pun. Pilih satu di bawah.
+            You haven&apos;t joined any campaign yet. Pick one below.
           </div>
         ) : (
           <div className="space-y-6">
@@ -90,11 +90,11 @@ export default function CampaignsPage() {
       </section>
 
       <section className="space-y-6">
-        <h2 className="font-bodoni text-2xl font-bold tracking-tight">Kampanye terbuka</h2>
+        <h2 className="font-bodoni text-2xl font-bold tracking-tight">Open campaigns</h2>
         {events.isLoading ? (
           <div className="h-24 rounded-3xl bg-surface-low animate-pulse" />
         ) : open.length === 0 ? (
-          <p className="text-text-muted">Belum ada kampanye terbuka saat ini.</p>
+          <p className="text-text-muted">There are no open campaigns right now.</p>
         ) : (
           <div className="grid md:grid-cols-2 gap-5">
             {open.map((e) => (
@@ -104,9 +104,9 @@ export default function CampaignsPage() {
                 </div>
                 <h3 className="font-bodoni text-xl font-bold leading-tight group-hover:text-accent-ink transition-colors">{e.title}</h3>
                 <p className="text-sm text-text-muted">
-                  {fmtUsdc(e.campaign!.clipRatePerMillion)} per 1 juta view · {fmtUsdc(e.campaign!.referralReward)} per penjualan
+                  {fmtUsdc(e.campaign!.clipRatePerMillion)} per 1 million views · {fmtUsdc(e.campaign!.referralReward)} per sale
                 </p>
-                <p className="text-xs text-text-muted">≈ {fmtIdr(e.campaign!.clipRatePerMillion)} per 1 juta view</p>
+                <p className="text-xs text-text-muted">≈ {fmtIdr(e.campaign!.clipRatePerMillion)} per 1 million views</p>
               </Link>
             ))}
           </div>
@@ -157,7 +157,7 @@ function JoinedCard({ eventId, accountId }: { eventId: string; accountId: string
     try {
       await sendTransactions([submitClipTx({ eventId, platform, url: url.trim() })], { callbackUrl: window.location.href });
       setUrl("");
-      setMsg({ ok: true, text: "Clip terkirim. View dihitung verifier setelah event selesai." });
+      setMsg({ ok: true, text: "Clip submitted. Views are counted by the verifier after the event ends." });
       await campaign.refetch();
     } catch (err) {
       setMsg({ ok: false, text: explainChainError(err) });
@@ -175,28 +175,28 @@ function JoinedCard({ eventId, accountId }: { eventId: string; accountId: string
             {event.title}
           </Link>
           <p className="text-sm text-text-muted">
-            {event.dateFull} · {terms.settled ? "kampanye selesai" : ended ? (reported ? "view sudah dihitung" : "menunggu laporan view") : "berjalan"}
+            {event.dateFull} · {terms.settled ? "campaign settled" : ended ? (reported ? "views counted" : "waiting for view report") : "in progress"}
           </p>
         </div>
         <div className="text-sm text-right space-y-0.5">
-          <p>{fmtUsdc(terms.clipRatePerMillion)} / 1 juta view</p>
-          <p>{fmtUsdc(terms.referralReward)} / penjualan</p>
+          <p>{fmtUsdc(terms.clipRatePerMillion)} / 1 million views</p>
+          <p>{fmtUsdc(terms.referralReward)} / sale</p>
         </div>
       </div>
 
       <div className="grid sm:grid-cols-3 gap-3">
-        <Stat label="Tiket via linkmu" value={String(mySales)} />
-        <Stat label="Clip dikirim" value={`${myClips.length}/5`} />
-        <Stat label={reported ? "Hadiah dihitung" : "Hadiah sementara"} value={fmtUsdc(Math.round(viewsOwed + salesOwed))} />
+        <Stat label="Tickets via your link" value={String(mySales)} />
+        <Stat label="Clips submitted" value={`${myClips.length}/5`} />
+        <Stat label={reported ? "Reward earned" : "Provisional reward"} value={fmtUsdc(Math.round(viewsOwed + salesOwed))} />
       </div>
-      {!reported && <p className="text-xs text-text-muted">Hadiah dari view baru terhitung setelah event selesai dan verifier melaporkan jumlah view. Nilai di atas baru dari penjualan referral.</p>}
+      {!reported && <p className="text-xs text-text-muted">Rewards from new views are counted after the event ends and the verifier reports the view counts. The value above is only from referral sales so far.</p>}
 
       <div className="space-y-2">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-text-muted">Link referralmu</p>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-text-muted">Your referral link</p>
         <div className="flex gap-2">
           <input readOnly value={refLink} className="flex-1 min-w-0 rounded-2xl border border-on-background/10 bg-background px-4 py-3 text-sm font-mono" />
           <button onClick={copy} className="px-5 rounded-2xl bg-primary text-on-primary text-sm font-semibold hover:bg-accent hover:text-[#141414] transition-colors flex items-center gap-2">
-            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />} {copied ? "Tersalin" : "Salin"}
+            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />} {copied ? "Copied" : "Copy"}
           </button>
         </div>
       </div>
@@ -208,7 +208,7 @@ function JoinedCard({ eventId, accountId }: { eventId: string; accountId: string
               <a href={cl.url} target="_blank" rel="noreferrer" className="truncate underline underline-offset-4">
                 {cl.platform} · {cl.url}
               </a>
-              <span className="tabular-nums text-text-muted shrink-0">{cl.views === null ? "belum dihitung" : `${Number(cl.views).toLocaleString("id-ID")} view`}</span>
+              <span className="tabular-nums text-text-muted shrink-0">{cl.views === null ? "not counted yet" : `${Number(cl.views).toLocaleString("en-US")} views`}</span>
             </li>
           ))}
         </ul>
@@ -228,7 +228,7 @@ function JoinedCard({ eventId, accountId }: { eventId: string; accountId: string
             className="rounded-2xl border border-on-background/10 bg-background px-4 py-3 text-sm min-w-0"
           />
           <button type="submit" disabled={busy} className="px-6 py-3 rounded-2xl bg-accent text-[#141414] font-semibold text-sm disabled:opacity-50">
-            {busy ? "Menunggu wallet…" : "Kirim clip"}
+            {busy ? "Waiting for wallet…" : "Submit clip"}
           </button>
         </form>
       )}

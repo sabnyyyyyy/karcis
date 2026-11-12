@@ -28,10 +28,10 @@ export default function DashboardLayout({
   if (!accountId) {
     return (
       <main data-nav-theme="light" className="min-h-screen flex flex-col items-center justify-center gap-6 px-6 text-center pt-16">
-        <h1 className="text-[36px] md:text-[48px] font-extrabold tracking-[-0.04em] leading-none">Hubungkan wallet dulu.</h1>
-        <p className="text-[#141414]/60 max-w-md">Paspor, pass, dan lencanamu tersimpan di akun wallet.</p>
+        <h1 className="text-[36px] md:text-[48px] font-extrabold tracking-[-0.04em] leading-none">Connect your wallet first.</h1>
+        <p className="text-[#141414]/60 max-w-md">Your passport, passes, and badges are stored in your wallet account.</p>
         <button onClick={signIn} className="px-8 py-3.5 rounded-full bg-[#9CFF1E] text-[#141414] font-semibold">
-          Hubungkan Wallet
+          Connect Wallet
         </button>
       </main>
     );

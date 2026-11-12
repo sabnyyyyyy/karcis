@@ -10,7 +10,7 @@ const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "
 export async function POST(request: Request) {
   // Di Vercel, SDK memakai BLOB_STORE_ID + OIDC; lokal bisa pakai BLOB_READ_WRITE_TOKEN.
   if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) {
-    return Response.json({ error: "Penyimpanan gambar belum diaktifkan. Tempel link gambar saja untuk sementara." }, { status: 503 });
+    return Response.json({ error: "Image storage isn't enabled yet. Paste an image link for now." }, { status: 503 });
   }
 
   let file: File | null = null;
@@ -19,12 +19,12 @@ export async function POST(request: Request) {
     const f = form.get("file");
     if (f instanceof File) file = f;
   } catch {
-    return Response.json({ error: "Permintaan tidak valid." }, { status: 400 });
+    return Response.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  if (!file) return Response.json({ error: "File tidak ditemukan." }, { status: 400 });
-  if (!ALLOWED.has(file.type)) return Response.json({ error: "Format harus JPG, PNG, atau WebP." }, { status: 415 });
-  if (file.size > MAX_BYTES) return Response.json({ error: "Ukuran maksimal 2 MB." }, { status: 413 });
+  if (!file) return Response.json({ error: "File not found." }, { status: 400 });
+  if (!ALLOWED.has(file.type)) return Response.json({ error: "The format must be JPG, PNG, or WebP." }, { status: 415 });
+  if (file.size > MAX_BYTES) return Response.json({ error: "Maximum size is 2 MB." }, { status: 413 });
 
   try {
     const blob = await put(`karcis/${crypto.randomUUID()}.${EXT[file.type]}`, file, {
@@ -34,6 +34,6 @@ export async function POST(request: Request) {
     return Response.json({ url: blob.url });
   } catch (e) {
     console.error("upload gagal", e);
-    return Response.json({ error: "Gagal menyimpan gambar. Coba lagi atau tempel link gambar." }, { status: 502 });
+    return Response.json({ error: "Failed to save the image. Try again or paste an image link." }, { status: 502 });
   }
 }

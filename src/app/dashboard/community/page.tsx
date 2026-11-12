@@ -16,9 +16,9 @@ import { levelFor, totalStamps } from "@/lib/passport";
 import { cn } from "@/lib/utils";
 
 const tabs = [
-  { key: "obrolan", label: "Obrolan", icon: MessagesSquare },
+  { key: "obrolan", label: "Chat", icon: MessagesSquare },
   { key: "voting", label: "Voting", icon: Vote },
-  { key: "reward", label: "Reward", icon: Gift },
+  { key: "reward", label: "Rewards", icon: Gift },
 ] as const;
 
 type TabKey = (typeof tabs)[number]["key"];
@@ -52,12 +52,12 @@ function Community() {
         <ScrollReveal>
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div className="space-y-3">
-              <p className="text-[11px] font-semibold text-accent-ink uppercase tracking-[0.3em]">Komunitas</p>
-              <h1 className="text-4xl md:text-5xl font-extrabold tracking-[-0.04em] leading-none">Ruang untuk yang datang</h1>
+              <p className="text-[11px] font-semibold text-accent-ink uppercase tracking-[0.3em]">Community</p>
+              <h1 className="text-4xl md:text-5xl font-extrabold tracking-[-0.04em] leading-none">A space for those who showed up</h1>
             </div>
             <Link href="/dashboard/passport" className="flex items-center gap-3 px-5 py-3 rounded-full bg-[#F5F8EE] border border-on-background/10 text-sm">
               <span className="font-semibold">{level.name}</span>
-              <span className="text-text-muted">{stamps} stempel</span>
+              <span className="text-text-muted">{stamps} stamps</span>
             </Link>
           </div>
         </ScrollReveal>
@@ -84,7 +84,7 @@ function Community() {
 
       <p className="flex items-start gap-2 text-xs text-text-muted max-w-2xl">
         <Info className="w-4 h-4 shrink-0 mt-0.5" />
-        Voting tercatat di kontrak NEAR. Obrolan masih tersimpan di browser ini saja; obrolan lintas perangkat butuh server pesan terpisah.
+        Votes are recorded on the NEAR contract. Chat is only stored in this browser for now; cross-device chat needs a separate message server.
       </p>
     </div>
   );

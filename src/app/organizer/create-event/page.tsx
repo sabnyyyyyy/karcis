@@ -14,7 +14,7 @@ import { chain } from "@/lib/chain/contract";
 import { buildNewEvent, createEventTx, estimateCreateEventDeposit, isValidEventCode, type EventForm } from "@/lib/chain/builders";
 import { explainChainError } from "@/lib/chain/errors";
 import { fmtIdr, fmtNear, fmtUsdc, idrToUnits } from "@/lib/chain/format";
-import { cn } from "@/lib/utils";
+import { cn, plural } from "@/lib/utils";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 
 const field =
@@ -22,9 +22,9 @@ const field =
 
 const defaultImages: Record<string, string> = {
   GIGS: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=1200",
-  PAMERAN: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=1200",
+  EXPO: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=1200",
   FESTIVAL: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&q=80&w=1200",
-  KOMUNITAS: "https://images.unsplash.com/photo-1514525253361-bee43833075d?auto=format&fit=crop&q=80&w=1200",
+  COMMUNITY: "https://images.unsplash.com/photo-1514525253361-bee43833075d?auto=format&fit=crop&q=80&w=1200",
   WORKSHOP: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=1200",
 };
 
@@ -64,7 +64,7 @@ function Form() {
   const [image, setImage] = useState("");
   const [stamps, setStamps] = useState(1);
   const [capacity, setCapacity] = useState("100");
-  const [tiers, setTiers] = useState<TierDraft[]>([{ ...newTier("Reguler"), price: "50000", perk: "Masuk + stempel" }]);
+  const [tiers, setTiers] = useState<TierDraft[]>([{ ...newTier("Regular"), price: "50000", perk: "Entry + stamp" }]);
 
   const [code, setCode] = useState("");
   const [nftName, setNftName] = useState("");
@@ -118,24 +118,24 @@ function Form() {
     if (!profile?.organizer || !accountId) return;
 
     const cleanCode = code.trim().toUpperCase();
-    if (!isValidEventCode(cleanCode)) return setError("Kode event harus 3 sampai 8 huruf besar atau angka.");
-    if (codeTaken) return setError("Kode event sudah dipakai event lain.");
-    if (tiers.some((t) => !t.name.trim())) return setError("Setiap jenis pass perlu nama.");
-    if (!date) return setError("Pilih tanggal event.");
-    if (cap < 1) return setError("Kapasitas minimal 1 tiket.");
+    if (!isValidEventCode(cleanCode)) return setError("The event code must be 3 to 8 uppercase letters or numbers.");
+    if (codeTaken) return setError("This event code is already used by another event.");
+    if (tiers.some((t) => !t.name.trim())) return setError("Every pass type needs a name.");
+    if (!date) return setError("Pick the event date.");
+    if (cap < 1) return setError("Capacity must be at least 1 ticket.");
     if (minPaid && paidUnits.some((u) => u < minPaid)) {
-      return setError(`Harga pass berbayar minimal ${fmtUsdc(minPaid)} (sekitar ${fmtIdr(minPaid)}).`);
+      return setError(`Paid passes must cost at least ${fmtUsdc(minPaid)} (about ${fmtIdr(minPaid)}).`);
     }
     if (useCampaign) {
-      if (!lowestPaid) return setError("Kampanye butuh minimal satu pass berbayar.");
-      if (clipUnits <= 0 || refUnits <= 0) return setError("Tarif clip dan hadiah referral harus lebih dari 0.");
-      if (refUnits > lowestPaid) return setError("Hadiah referral tidak boleh melebihi harga pass termurah.");
+      if (!lowestPaid) return setError("A campaign needs at least one paid pass.");
+      if (clipUnits <= 0 || refUnits <= 0) return setError("The clip rate and referral reward must be greater than 0.");
+      if (refUnits > lowestPaid) return setError("The referral reward can't exceed the cheapest pass price.");
     }
 
     const startAt = new Date(`${date}T${start}:00`);
     let endAt = new Date(`${date}T${end}:00`);
     if (endAt <= startAt) endAt = new Date(endAt.getTime() + 24 * 3600 * 1000); // lewat tengah malam
-    if (endAt.getTime() <= Date.now()) return setError("Waktu selesai event harus di masa depan.");
+    if (endAt.getTime() <= Date.now()) return setError("The event end time must be in the future.");
 
     const d = new Date(`${date}T00:00:00`);
     const form: EventForm = {
@@ -145,8 +145,8 @@ function Form() {
       city,
       venue,
       address,
-      dateLabel: d.toLocaleDateString("id-ID", { day: "numeric", month: "short" }),
-      dateFull: d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+      dateLabel: d.toLocaleDateString("en-US", { day: "numeric", month: "short" }),
+      dateFull: d.toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" }),
       time: `${start} - ${end}`,
       image: image.trim() || defaultImages[category] || "",
       description,
@@ -155,7 +155,7 @@ function Form() {
         id: `t${i + 1}`,
         name: t.name,
         priceUnits: tierUnits[i],
-        perk: t.perk.trim() || `Masuk + ${stamps} stempel`,
+        perk: t.perk.trim() || `Entry + ${stamps} ${plural(stamps, "stamp")}`,
       })),
       stamps,
       capacity: cap,
@@ -221,20 +221,20 @@ function Form() {
         <form onSubmit={submit} className="relative max-w-3xl mx-auto space-y-12">
           <div className="space-y-4">
             <Link href="/organizer" className="inline-flex items-center gap-1 text-sm text-[#5C6157] hover:text-[#141414]">
-              <ChevronLeft className="w-4 h-4" /> Panel
+              <ChevronLeft className="w-4 h-4" /> Dashboard
             </Link>
-            <h1 className="text-[40px] md:text-[56px] font-extrabold tracking-[-0.04em] leading-none">Buat event.</h1>
+            <h1 className="text-[40px] md:text-[56px] font-extrabold tracking-[-0.04em] leading-none">Create event.</h1>
             <p className="text-[#5C6157] max-w-lg">
-              Event ini ditulis ke kontrak NEAR. Harga diisi dalam Rupiah dan dikonversi ke {config.data ? "USDC" : "stablecoin"} sesuai kurs tampilan.
+              This event is written to the NEAR contract. Prices are entered in Rupiah and converted to {config.data ? "USDC" : "stablecoin"} at the display rate.
             </p>
           </div>
 
-          <Block title="Tentang event">
-            <Label text="Nama event">
+          <Block title="About the event">
+            <Label text="Event name">
               <input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Gigs Basement Vol. 13" className={field} />
             </Label>
             <div className="space-y-2 text-[13px] font-semibold">
-              Kategori
+              Category
               <div className="flex flex-wrap gap-2">
                 {CREATABLE_CATEGORIES.map((c) => (
                   <button
@@ -251,68 +251,68 @@ function Form() {
                 ))}
               </div>
             </div>
-            <Label text="Deskripsi">
-              <textarea required rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ceritakan acaranya" className={cn(field, "resize-none")} />
+            <Label text="Description">
+              <textarea required rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Tell us about the event" className={cn(field, "resize-none")} />
             </Label>
-            <Label text="Gambar event (opsional)">
-              <ImageUpload value={image} onChange={setImage} placeholder="atau tempel link gambar: https://..." fieldClass={field} />
+            <Label text="Event image (optional)">
+              <ImageUpload value={image} onChange={setImage} placeholder="or paste an image link: https://..." fieldClass={field} />
             </Label>
           </Block>
 
-          <Block title="Waktu & tempat">
+          <Block title="Time & place">
             <div className="grid sm:grid-cols-3 gap-5">
-              <Label text="Tanggal">
+              <Label text="Date">
                 <input required type="date" value={date} onChange={(e) => setDate(e.target.value)} className={field} />
               </Label>
-              <Label text="Mulai">
+              <Label text="Start">
                 <input required type="time" value={start} onChange={(e) => setStart(e.target.value)} className={field} />
               </Label>
-              <Label text="Selesai">
+              <Label text="End">
                 <input required type="time" value={end} onChange={(e) => setEnd(e.target.value)} className={field} />
               </Label>
             </div>
             <div className="grid sm:grid-cols-2 gap-5">
-              <Label text="Nama tempat">
+              <Label text="Venue name">
                 <input required value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="Basement Studio" className={field} />
               </Label>
-              <Label text="Kota">
+              <Label text="City">
                 <input required value={city} onChange={(e) => setCity(e.target.value)} placeholder="Bandung" className={field} />
               </Label>
             </div>
-            <Label text="Alamat (opsional)">
-              <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Jl. Contoh No. 1" className={field} />
+            <Label text="Address (optional)">
+              <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Example St." className={field} />
             </Label>
           </Block>
 
-          <Block title="Pass, kapasitas & stempel">
-            <Label text="Kapasitas (jumlah tiket)">
+          <Block title="Passes, capacity & stamps">
+            <Label text="Capacity (number of tickets)">
               <input required type="number" min={1} max={100000} value={capacity} onChange={(e) => setCapacity(e.target.value)} className={field} />
             </Label>
 
             <div className="space-y-4">
               {tiers.map((t, i) => (
                 <div key={t.key} className="p-5 rounded-3xl border border-[#141414]/10 bg-[#F5F8EE] grid sm:grid-cols-[1fr_1fr_auto] gap-4 items-end">
-                  <Label text="Nama pass">
-                    <input required value={t.name} onChange={(e) => updateTier(t.key, { name: e.target.value })} placeholder="Reguler" className={field} />
+                  <Label text="Pass name">
+                    <input required value={t.name} onChange={(e) => updateTier(t.key, { name: e.target.value })} placeholder="Regular" className={field} />
                   </Label>
-                  <Label text="Harga (Rp, 0 = gratis)">
+                  <Label text="Price (Rp, 0 = free)">
                     <input required type="number" min={0} value={t.price} onChange={(e) => updateTier(t.key, { price: e.target.value })} placeholder="50000" className={field} />
                   </Label>
                   <button
                     type="button"
                     disabled={tiers.length === 1}
                     onClick={() => setTiers((ts) => ts.filter((x) => x.key !== t.key))}
-                    aria-label="Hapus pass"
+                    aria-label="Remove pass"
                     className="h-[52px] w-[52px] rounded-2xl border border-[#141414]/15 flex items-center justify-center hover:bg-[#E5484D] hover:text-white hover:border-[#E5484D] transition-colors disabled:opacity-30 disabled:pointer-events-none"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                   <div className="sm:col-span-3 space-y-3">
-                    <Label text="Yang didapat (opsional)">
-                      <input value={t.perk} onChange={(e) => updateTier(t.key, { perk: e.target.value })} placeholder="Masuk + stiker edisi terbatas" className={field} />
+                    <Label text="What's included (optional)">
+                      <input value={t.perk} onChange={(e) => updateTier(t.key, { perk: e.target.value })} placeholder="Entry + limited edition sticker" className={field} />
                     </Label>
                     <p className="text-xs text-[#5C6157]">
-                      Disimpan sebagai {tierUnits[i] === 0 ? "gratis" : `${fmtUsdc(tierUnits[i])} (≈ ${fmtIdr(tierUnits[i])})`}
+                      Stored as {tierUnits[i] === 0 ? "free" : `${fmtUsdc(tierUnits[i])} (≈ ${fmtIdr(tierUnits[i])})`}
                     </p>
                   </div>
                 </div>
@@ -323,14 +323,14 @@ function Form() {
                   onClick={() => setTiers((ts) => [...ts, newTier()])}
                   className="inline-flex items-center gap-2 text-sm font-semibold text-[#3F7D00] hover:underline"
                 >
-                  <Plus className="w-4 h-4" /> Tambah jenis pass
+                  <Plus className="w-4 h-4" /> Add pass type
                 </button>
               )}
-              {minPaid > 0 && <p className="text-xs text-[#5C6157]">Harga pass berbayar minimal {fmtUsdc(minPaid)} ({fmtIdr(minPaid)}).</p>}
+              {minPaid > 0 && <p className="text-xs text-[#5C6157]">Paid passes cost at least {fmtUsdc(minPaid)} ({fmtIdr(minPaid)}).</p>}
             </div>
 
             <div className="space-y-2 text-[13px] font-semibold">
-              Stempel untuk yang hadir
+              Stamps for attendees
               <div className="flex gap-2">
                 {[1, 2, 3].map((n) => (
                   <button
@@ -346,13 +346,13 @@ function Form() {
                   </button>
                 ))}
               </div>
-              <p className="font-normal text-[#5C6157]">Event kecil biasanya 1 stempel. Event besar komunitas bisa 2 atau 3.</p>
+              <p className="font-normal text-[#5C6157]">Small events are usually 1 stamp. Large community events can give 2 or 3.</p>
             </div>
           </Block>
 
-          <Block title="Identitas NFT pass">
+          <Block title="Pass NFT identity">
             <div className="grid sm:grid-cols-2 gap-5">
-              <Label text="Kode event (awalan ID pass)">
+              <Label text="Event code (prefix of the pass ID)">
                 <input
                   required
                   value={code}
@@ -361,27 +361,27 @@ function Form() {
                   className={cn(field, "font-mono uppercase", codeTaken && "border-[#E5484D]")}
                 />
               </Label>
-              <Label text="Nama NFT (opsional)">
-                <input value={nftName} onChange={(e) => setNftName(e.target.value)} placeholder={title || "Sama dengan nama event"} className={field} />
+              <Label text="NFT name (optional)">
+                <input value={nftName} onChange={(e) => setNftName(e.target.value)} placeholder={title || "Same as the event name"} className={field} />
               </Label>
             </div>
             <p className="text-xs text-[#5C6157]">
-              {codeTaken ? <span className="text-[#E5484D]">Kode ini sudah dipakai.</span> : "3 sampai 8 huruf besar atau angka, unik di seluruh platform."} Contoh ID pass:{" "}
+              {codeTaken ? <span className="text-[#E5484D]">This code is already taken.</span> : "3 to 8 uppercase letters or numbers, unique across the platform."} Example pass ID:{" "}
               <span className="font-mono">{previewCode}-0001</span>
             </p>
-            <Label text="Gambar lencana setelah check-in (opsional)">
-              <ImageUpload value={badgeImage} onChange={setBadgeImage} placeholder="atau tempel link (kosong = pakai gambar event)" fieldClass={field} />
+            <Label text="Badge image after check-in (optional)">
+              <ImageUpload value={badgeImage} onChange={setBadgeImage} placeholder="or paste a link (empty = use the event image)" fieldClass={field} />
             </Label>
           </Block>
 
-          <Block title="Biaya & kampanye promosi">
+          <Block title="Fees & promo campaign">
             <div className="space-y-3 text-[13px] font-semibold">
-              Siapa yang menanggung biaya layanan 3,4%?
+              Who covers the 3.4% service fee?
               <div className="grid sm:grid-cols-2 gap-3">
                 {(
                   [
-                    { v: "BUYER", t: "Pembeli", d: "Harga tiket tetap, biaya ditambahkan di atasnya saat bayar." },
-                    { v: "SELLER", t: "Penyelenggara", d: "Pembeli bayar sesuai harga tiket, biaya dipotong dari pendapatanmu." },
+                    { v: "BUYER", t: "Buyer", d: "The ticket price stays the same, and the fee is added on top at checkout." },
+                    { v: "SELLER", t: "Organizer", d: "The buyer pays the ticket price, and the fee is deducted from your revenue." },
                   ] as const
                 ).map((o) => (
                   <button
@@ -403,9 +403,9 @@ function Form() {
             <label className="flex items-start gap-4 p-5 rounded-3xl border border-[#141414]/10 bg-[#F5F8EE] cursor-pointer">
               <input type="checkbox" checked={useCampaign} onChange={(e) => setUseCampaign(e.target.checked)} className="mt-1 w-5 h-5 accent-[#3F7D00]" />
               <span className="space-y-1">
-                <span className="block font-semibold">Pakai kampanye clipper</span>
+                <span className="block font-semibold">Use a clipper campaign</span>
                 <span className="block text-sm text-[#5C6157] leading-snug">
-                  Clipper membuat video promosi dan dibayar per 1 juta view, ditambah hadiah per penjualan lewat link referral mereka. Dana cair setelah event selesai. Tanpa kampanye, tidak ada biaya promosi.
+                  Clippers make promo videos and are paid per 1 million views, plus a reward for each sale through their referral link. Funds are released after the event ends. With no campaign, there is no promo fee.
                 </span>
               </span>
             </label>
@@ -413,20 +413,20 @@ function Form() {
             {useCampaign && (
               <div className="space-y-5">
                 <div className="grid sm:grid-cols-2 gap-5">
-                  <Label text="Bayaran clip per 1 juta view (Rp)">
+                  <Label text="Clip payout per 1 million views (Rp)">
                     <input type="number" min={1} value={clipRate} onChange={(e) => setClipRate(e.target.value)} className={field} />
                   </Label>
-                  <Label text="Hadiah per penjualan referral (Rp)">
+                  <Label text="Reward per referral sale (Rp)">
                     <input type="number" min={1} value={refReward} onChange={(e) => setRefReward(e.target.value)} className={field} />
                   </Label>
                 </div>
                 <div className="p-5 rounded-3xl border border-[#141414]/10 text-sm space-y-2">
                   <p>
-                    Biaya promosi 3% dari harga tiket (2% untuk pool clip, 1% untuk pool referral) dikumpulkan dari tiap penjualan, di luar biaya layanan 3,4%.
+                    The promo fee is 3% of the ticket price (2% for the clip pool, 1% for the referral pool), collected from each sale, on top of the 3.4% service fee.
                   </p>
                   <p>
-                    Deposit yang kamu setor sebelum penjualan dibuka (10% dari anggaran promosi untuk {cap || 0} tiket):{" "}
-                    <b>{lowestPaid ? `${fmtUsdc(deposit)} (≈ ${fmtIdr(deposit)})` : "isi dulu harga pass berbayar"}</b>
+                    Deposit you pay before sales open (10% of the promo budget for {cap || 0} tickets):{" "}
+                    <b>{lowestPaid ? `${fmtUsdc(deposit)} (≈ ${fmtIdr(deposit)})` : "enter a paid pass price first"}</b>
                   </p>
                 </div>
               </div>
@@ -435,9 +435,9 @@ function Form() {
 
           <div className="p-5 rounded-3xl border border-[#141414]/10 bg-[#F5F8EE] text-sm text-[#5C6157] space-y-1">
             <p>
-              Biaya penyimpanan di jaringan NEAR: sekitar <b className="text-[#141414]">{fmtNear(nearDeposit)}</b> dibayar dari walletmu. Kelebihannya dikembalikan otomatis.
+              NEAR network storage cost: about <b className="text-[#141414]">{fmtNear(nearDeposit)}</b> paid from your wallet. Any excess is refunded automatically.
             </p>
-            <p>Siapkan saldo NEAR sedikit lebih besar untuk gas.</p>
+            <p>Keep a slightly larger NEAR balance for gas.</p>
           </div>
 
           {error && <p className="text-[#E5484D] font-medium">{error}</p>}
@@ -448,7 +448,7 @@ function Form() {
             className="inline-flex items-center gap-4 px-9 py-4 rounded-full text-[15px] font-semibold text-[#141414] hover:shadow-[0_0_40px_rgba(156,255,30,0.6)] transition-shadow disabled:opacity-60"
             style={{ background: "linear-gradient(180deg, #C6FF6B 0%, #9CFF1E 100%)" }}
           >
-            {sending ? "Menunggu wallet…" : "Terbitkan event"} <ArrowUpRight className="w-4 h-4" />
+            {sending ? "Waiting for wallet…" : "Publish event"} <ArrowUpRight className="w-4 h-4" />
           </button>
         </form>
       </section>

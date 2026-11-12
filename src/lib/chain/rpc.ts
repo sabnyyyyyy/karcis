@@ -24,7 +24,7 @@ async function rpc(params: object): Promise<RpcResponse> {
   } catch (e) {
     throw new ChainError(explainChainError(e));
   }
-  if (!res.ok) throw new ChainError(`RPC NEAR membalas ${res.status}`);
+  if (!res.ok) throw new ChainError(`NEAR RPC responded with ${res.status}`);
   return (await res.json()) as RpcResponse;
 }
 
@@ -37,10 +37,10 @@ export async function viewCall<T>(method: string, args: object = {}, contract: s
     method_name: method,
     args_base64: toBase64(JSON.stringify(args)),
   });
-  if (json.error) throw new ChainError(explainChainError(json.error.data ?? json.error.message ?? "Error RPC"));
+  if (json.error) throw new ChainError(explainChainError(json.error.data ?? json.error.message ?? "RPC error"));
   if (json.result?.error) throw new ChainError(explainChainError(json.result.error));
   const bytes = json.result?.result;
-  if (!bytes) throw new ChainError("Jawaban RPC kosong");
+  if (!bytes) throw new ChainError("Empty RPC response");
   const text = new TextDecoder().decode(new Uint8Array(bytes));
   return (text === "" ? null : JSON.parse(text)) as T;
 }

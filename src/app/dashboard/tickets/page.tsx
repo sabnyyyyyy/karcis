@@ -4,7 +4,7 @@ import React from "react";
 import { ScrollReveal } from "@/components/animations/SpatialSystem";
 import { Calendar, MapPin, ChevronRight, ScanLine, Stamp } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { cn, plural } from "@/lib/utils";
 import { useListings, useMyPassesQuery } from "@/lib/chain/hooks";
 import { useNearWallet } from "@/providers/NearWalletProvider";
 import { explainChainError } from "@/lib/chain/errors";
@@ -21,8 +21,8 @@ export default function MyPassesPage() {
   if (!accountId) {
     return (
       <div className="py-24 text-center space-y-5">
-        <p className="text-text-muted">Hubungkan wallet untuk melihat pass dan lencanamu.</p>
-        <button onClick={signIn} className="px-8 py-3 rounded-full bg-accent text-[#141414] font-bold text-sm">Hubungkan wallet</button>
+        <p className="text-text-muted">Connect your wallet to see your passes and badges.</p>
+        <button onClick={signIn} className="px-8 py-3 rounded-full bg-accent text-[#141414] font-bold text-sm">Connect wallet</button>
       </div>
     );
   }
@@ -33,7 +33,7 @@ export default function MyPassesPage() {
     return (
       <div className="py-24 text-center space-y-4">
         <p className="text-text-muted">{explainChainError(error)}</p>
-        <button onClick={() => refetch()} className="text-accent-ink font-bold underline underline-offset-4">Coba lagi</button>
+        <button onClick={() => refetch()} className="text-accent-ink font-bold underline underline-offset-4">Try again</button>
       </div>
     );
   }
@@ -46,28 +46,28 @@ export default function MyPassesPage() {
       <section className="border-b border-on-background/10 pb-8">
         <ScrollReveal>
           <div className="space-y-3">
-            <p className="text-[11px] font-bold text-accent-ink uppercase tracking-[0.3em]">Pass &amp; lencana</p>
-            <h1 className="font-bodoni text-5xl md:text-6xl font-black tracking-tight text-text-main">Koleksimu</h1>
+            <p className="text-[11px] font-bold text-accent-ink uppercase tracking-[0.3em]">Passes &amp; badges</p>
+            <h1 className="font-bodoni text-5xl md:text-6xl font-black tracking-tight text-text-main">Your collection</h1>
           </div>
         </ScrollReveal>
       </section>
 
       <Group
-        title="Pass aktif"
-        hint="Tunjukkan QR di pintu masuk. Setelah discan, pass jadi lencana."
+        title="Active passes"
+        hint="Show the QR at the door. Once scanned, the pass becomes a badge."
         icon={<ScanLine className="w-5 h-5 text-accent-ink" />}
         passes={active}
         listedIds={listedIds}
-        empty="Belum ada pass aktif."
+        empty="No active passes yet."
         emptyAction
       />
       <Group
-        title="Lencana"
-        hint="Setiap lencana adalah stempel di paspormu."
+        title="Badges"
+        hint="Every badge is a stamp in your passport."
         icon={<Stamp className="w-5 h-5 text-accent-coral" />}
         passes={badges}
         listedIds={listedIds}
-        empty="Lencana pertamamu muncul setelah pass discan di pintu masuk."
+        empty="Your first badge appears after your pass is scanned at the door."
       />
     </div>
   );
@@ -105,7 +105,7 @@ function Group({
           <p>{empty}</p>
           {emptyAction && (
             <Link href="/events" className="inline-block text-accent-ink font-bold underline underline-offset-4">
-              Cari event
+              Find events
             </Link>
           )}
         </div>
@@ -141,16 +141,16 @@ function PassCard({ pass, listed }: { pass: Pass; listed: boolean }) {
             isBadge ? "bg-background/90 text-accent-coral" : "bg-accent text-[#141414]"
           )}
         >
-          {isBadge ? "Lencana" : "Pass aktif"}
+          {isBadge ? "Badge" : "Active pass"}
         </span>
         {listed && (
-          <span className="absolute top-4 right-4 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-primary text-on-primary">Dijual</span>
+          <span className="absolute top-4 right-4 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-primary text-on-primary">For sale</span>
         )}
         {isBadge && (
           <div className="absolute bottom-4 right-4 stamp w-16 h-16 flex items-center justify-center bg-background/80 text-[10px] font-black uppercase text-center leading-tight">
             +{pass.stamps}
             <br />
-            stempel
+            {plural(pass.stamps, "stamp")}
           </div>
         )}
       </div>
@@ -165,7 +165,7 @@ function PassCard({ pass, listed }: { pass: Pass; listed: boolean }) {
         </div>
         <div className="pt-4 border-t border-on-background/5 flex items-center justify-between text-[11px] font-bold uppercase tracking-widest text-accent-ink">
           <span className="font-mono text-text-muted">{pass.id}</span>
-          <span className="flex items-center gap-1">{isBadge ? "Lihat lencana" : "Buka pass"} <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" /></span>
+          <span className="flex items-center gap-1">{isBadge ? "View badge" : "Open pass"} <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" /></span>
         </div>
       </div>
     </Link>

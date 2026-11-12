@@ -207,7 +207,7 @@ export function Hero() {
           transition={{ duration: 0.9, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
           className="text-[34px] sm:text-[48px] md:text-[60px] font-extrabold uppercase leading-[1.05] tracking-[-0.035em]"
         >
-          <span style={{ color: LIME }}>Tiket</span> jadi stempel
+          <span style={{ color: LIME }}>Tickets</span> become stamps
           <span style={{ color: LIME }}>.</span>
         </motion.h1>
 
@@ -217,8 +217,8 @@ export function Hero() {
           transition={{ duration: 0.9, delay: 0.65, ease: [0.22, 1, 0.36, 1] }}
           className="max-w-xl text-[15px] md:text-[17px] leading-relaxed text-white/60"
         >
-          Scan di pintu masuk, kumpulkan stempel di paspormu, lalu buka obrolan, voting, dan reward dari komunitas
-          gigs, pameran, dan festival kreatormu.
+          Scan at the door, collect stamps in your passport, then unlock chat, voting, and rewards from the community
+          of your gigs, expos, and creator festivals.
         </motion.p>
 
         <motion.div
@@ -231,7 +231,7 @@ export function Hero() {
             className="group inline-flex items-center gap-6 px-8 py-4 rounded-full text-[15px] font-semibold text-[#141414] shadow-[0_0_50px_rgba(156,255,30,0.45)] hover:shadow-[0_0_70px_rgba(156,255,30,0.65)] transition-shadow"
             style={{ background: "linear-gradient(180deg, #C6FF6B 0%, #9CFF1E 100%)" }}
           >
-            Cari event
+            Find events
             <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </Link>
         </motion.div>

@@ -49,42 +49,42 @@ export function ResalePanel({ pass }: { pass: Pass }) {
     <div className="p-6 md:p-8 rounded-3xl border border-on-background/10 bg-surface space-y-5">
       <div className="flex items-center gap-3 text-accent-ink">
         <Repeat className="w-5 h-5" />
-        <h2 className="font-bodoni text-2xl font-bold tracking-tight">Tidak jadi hadir?</h2>
+        <h2 className="font-bodoni text-2xl font-bold tracking-tight">Can&apos;t make it?</h2>
       </div>
 
       {listing ? (
         <div className="space-y-4">
           <p className="text-sm text-text-muted leading-relaxed">
-            Pass ini sedang dijual di pasar tiket seharga <b className="text-primary">{fmtUsdc(listing.price)}</b> ({fmtIdr(listing.price)}). Kamu akan menerima{" "}
-            <b className="text-primary">{fmtUsdc(listing.seller_receives)}</b> setelah biaya platform 3,4%. Kalau kamu datang dan discan, listing otomatis dibatalkan.
+            This pass is listed on the ticket market for <b className="text-primary">{fmtUsdc(listing.price)}</b> ({fmtIdr(listing.price)}). You&apos;ll receive{" "}
+            <b className="text-primary">{fmtUsdc(listing.seller_receives)}</b> after the 3.4% platform fee. If you show up and get scanned, the listing is canceled automatically.
           </p>
           <div className="flex flex-wrap items-center gap-4">
             <button
-              onClick={() => run(cancelResaleTx(pass.id), "Penjualan dibatalkan.")}
+              onClick={() => run(cancelResaleTx(pass.id), "Listing canceled.")}
               disabled={busy}
               className="px-6 py-3 rounded-full border border-on-background/20 text-sm font-semibold hover:bg-primary hover:text-on-primary transition-colors disabled:opacity-50"
             >
-              {busy ? "Menunggu wallet…" : "Batalkan penjualan"}
+              {busy ? "Waiting for wallet…" : "Cancel listing"}
             </button>
             <Link href={`/resale?event=${pass.eventId}`} className="text-sm font-semibold text-accent-ink underline underline-offset-4">
-              Lihat di pasar tiket
+              View on ticket market
             </Link>
           </div>
         </div>
       ) : (
         <div className="space-y-4">
           <p className="text-sm text-text-muted leading-relaxed">
-            Dijual dengan harga yang sama seperti saat kamu beli: <b className="text-primary">{fmtUsdc(face)}</b> ({fmtIdr(face)}). Kamu menerima{" "}
-            <b className="text-primary">{fmtUsdc(face - fee)}</b> setelah biaya platform 3,4%.
+            Listed at the same price you paid: <b className="text-primary">{fmtUsdc(face)}</b> ({fmtIdr(face)}). You&apos;ll receive{" "}
+            <b className="text-primary">{fmtUsdc(face - fee)}</b> after the 3.4% platform fee.
           </p>
           <button
-            onClick={() => run(listPassTx(pass.id, face), "Pass kamu sudah dipasang di pasar tiket.")}
+            onClick={() => run(listPassTx(pass.id, face), "Your pass is now listed on the ticket market.")}
             disabled={busy}
             className="px-7 py-3 rounded-full bg-primary text-on-primary text-sm font-semibold hover:bg-accent hover:text-[#141414] transition-colors disabled:opacity-40"
           >
-            {busy ? "Menunggu wallet…" : "Jual tiket"}
+            {busy ? "Waiting for wallet…" : "Sell ticket"}
           </button>
-          <p className="text-xs text-text-muted">Butuh sekitar 0,003 NEAR untuk menyimpan listing (kelebihan dikembalikan).</p>
+          <p className="text-xs text-text-muted">Needs about 0.003 NEAR to store the listing (any excess is refunded).</p>
         </div>
       )}
 

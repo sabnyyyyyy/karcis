@@ -37,9 +37,9 @@ export const useChatStore = create<ChatState>()(
   persist(
     (set) => ({
       messages: [
-        welcome("umum", "Selamat datang di obrolan umum. Ceritakan acara terakhir yang kamu datangi."),
-        welcome("privat", "Ruang ini khusus pengunjung langganan. Sapa sesamamu."),
-        welcome("kreator", "Ruang kreator: tempat diskusi karya dan kolaborasi."),
+        welcome("umum", "Welcome to the general chat. Tell us about the last event you attended."),
+        welcome("privat", "This room is for regular attendees. Say hi to your fellow regulars."),
+        welcome("kreator", "Creators' room: a place to discuss work and collaborate."),
       ],
       send: (room, author, text) => {
         const clean = text.trim().slice(0, MAX_LEN);

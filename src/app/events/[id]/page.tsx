@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { cn, plural } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useSavedStore } from "@/store/useSavedStore";
 import { useHydrated } from "@/lib/useHydrated";
@@ -78,10 +78,10 @@ function EventDetail() {
   if (error || !event) {
     return (
       <main className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-6 text-center">
-        <h1 className="font-bodoni text-4xl font-black">{error ? "Event belum bisa dimuat." : "Event tidak ditemukan."}</h1>
-        <p className="text-text-muted">{error ? explainChainError(error) : "Event ini mungkin tidak ada di kontrak."}</p>
+        <h1 className="font-bodoni text-4xl font-black">{error ? "The event can't be loaded." : "Event not found."}</h1>
+        <p className="text-text-muted">{error ? explainChainError(error) : "This event may not exist on the contract."}</p>
         <Link href="/events" className="px-8 py-3 bg-primary text-on-primary rounded-full text-xs font-bold uppercase tracking-widest">
-          Kembali ke daftar event
+          Back to events
         </Link>
       </main>
     );
@@ -103,7 +103,7 @@ function EventDetail() {
     setJoinMsg(null);
     try {
       await sendTransactions([joinCampaignTx(event.id)], { callbackUrl: window.location.href });
-      setJoinMsg("Kamu sudah ikut kampanye. Link referralmu siap.");
+      setJoinMsg("You've joined the campaign. Your referral link is ready.");
       await campaign.refetch();
     } catch (e) {
       setJoinMsg(explainChainError(e));
@@ -134,7 +134,7 @@ function EventDetail() {
         <div className="absolute top-24 left-6 md:left-12 z-10">
           <Link href="/events">
             <button className="flex items-center gap-2 px-5 py-2.5 bg-background/90 backdrop-blur-md border border-on-background/5 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-accent hover:text-[#141414] transition-all">
-              <ArrowLeft className="w-3.5 h-3.5" /> Semua event
+              <ArrowLeft className="w-3.5 h-3.5" /> All events
             </button>
           </Link>
         </div>
@@ -145,12 +145,12 @@ function EventDetail() {
               <div className="flex flex-wrap items-center gap-3">
                 <Badge variant="teal" className="text-[9px] px-2 py-0.5">{event.category}</Badge>
                 <span className="stamp px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest bg-background/70">
-                  +{event.stamps} stempel
+                  +{event.stamps} stamp
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full bg-background/80 text-[10px] font-mono font-bold">{event.code}</span>
               </div>
               <h1 className="font-bodoni text-4xl md:text-6xl font-black tracking-tight leading-none">{event.title}</h1>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-text-muted">Diselenggarakan {event.organizer}</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-text-muted">Hosted by {event.organizer}</p>
             </div>
           </ScrollReveal>
 
@@ -158,12 +158,12 @@ function EventDetail() {
             <div className="flex gap-3">
               <button
                 onClick={() => toggleSaved(params.id)}
-                aria-label="Simpan event"
+                aria-label="Save event"
                 className={cn("p-3.5 rounded-full border transition-all shadow-sm", isLiked ? "bg-accent-coral border-accent-coral text-white" : "bg-background/80 border-on-background/10 hover:border-accent-coral")}
               >
                 <Heart className={cn("w-5 h-5", isLiked && "fill-current")} />
               </button>
-              <button aria-label="Bagikan" className="p-3.5 rounded-full bg-background/80 border border-on-background/10 hover:border-accent transition-all shadow-sm">
+              <button aria-label="Share" className="p-3.5 rounded-full bg-background/80 border border-on-background/10 hover:border-accent transition-all shadow-sm">
                 <Share2 className="w-5 h-5" />
               </button>
             </div>
@@ -177,10 +177,10 @@ function EventDetail() {
           <div className="lg:col-span-8 space-y-12">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 border-y border-on-background/5 py-8">
               {[
-                { label: "Tanggal", value: event.dateFull },
-                { label: "Waktu", value: event.time },
-                { label: "Tempat", value: event.venue },
-                { label: "Tiket", value: `${event.sold} / ${event.capacity} terjual` },
+                { label: "Date", value: event.dateFull },
+                { label: "Time", value: event.time },
+                { label: "Venue", value: event.venue },
+                { label: "Tickets", value: `${event.sold} / ${event.capacity} sold` },
               ].map((s) => (
                 <div key={s.label} className="space-y-1">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">{s.label}</span>
@@ -190,7 +190,7 @@ function EventDetail() {
             </div>
 
             <div className="space-y-4">
-              <h2 className="font-bodoni text-2xl font-bold tracking-tight">Tentang event ini</h2>
+              <h2 className="font-bodoni text-2xl font-bold tracking-tight">About this event</h2>
               <p className="text-lg text-text-muted leading-relaxed whitespace-pre-line">{event.description}</p>
             </div>
 
@@ -198,7 +198,7 @@ function EventDetail() {
               <div className="space-y-6">
                 <div className="flex items-center gap-3 text-accent-ink">
                   <Music className="w-5 h-5" />
-                  <h2 className="font-bodoni text-2xl font-bold tracking-tight">Susunan acara</h2>
+                  <h2 className="font-bodoni text-2xl font-bold tracking-tight">Lineup</h2>
                 </div>
                 <div className="grid grid-cols-1 gap-3">
                   {event.lineup.map((act, i) => (
@@ -217,7 +217,7 @@ function EventDetail() {
             <div className="space-y-4">
               <div className="flex items-center gap-3 text-accent-coral">
                 <MapPin className="w-5 h-5" />
-                <h2 className="font-bodoni text-2xl font-bold tracking-tight">Lokasi</h2>
+                <h2 className="font-bodoni text-2xl font-bold tracking-tight">Location</h2>
               </div>
               <div className="p-6 bg-surface-low border border-on-background/5 rounded-xl">
                 <p className="text-lg font-bold">{event.venue}</p>
@@ -234,43 +234,43 @@ function EventDetail() {
                 <div className="relative space-y-6">
                   <div className="flex items-center gap-3 text-[#9CFF1E]">
                     <Megaphone className="w-5 h-5" />
-                    <h2 className="text-xl font-bold tracking-tight">Kampanye promosi (jadi clipper)</h2>
+                    <h2 className="text-xl font-bold tracking-tight">Promo campaign (become a clipper)</h2>
                   </div>
                   <p className="text-white/70 leading-relaxed">
-                    Buat konten promosi event ini dan dapatkan bayaran. Hadiah cair setelah event selesai.
+                    Make promo content for this event and get paid. Rewards are released after the event ends.
                   </p>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
-                      <p className="text-[11px] uppercase tracking-widest text-white/50">Per 1 juta view</p>
+                      <p className="text-[11px] uppercase tracking-widest text-white/50">Per 1 million views</p>
                       <p className="text-2xl font-bold text-[#9CFF1E]">{fmtUsdc(event.campaign.clipRatePerMillion)}</p>
                       <p className="text-xs text-white/50">≈ {fmtIdr(event.campaign.clipRatePerMillion)}</p>
                     </div>
                     <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
-                      <p className="text-[11px] uppercase tracking-widest text-white/50">Per tiket lewat linkmu</p>
+                      <p className="text-[11px] uppercase tracking-widest text-white/50">Per ticket via your link</p>
                       <p className="text-2xl font-bold text-[#9CFF1E]">{fmtUsdc(event.campaign.referralReward)}</p>
                       <p className="text-xs text-white/50">≈ {fmtIdr(event.campaign.referralReward)}</p>
                     </div>
                   </div>
                   <p className="text-xs text-white/50">
-                    {campaign.data?.participants.length ?? 0} clipper sudah ikut · {campaign.data?.clips.length ?? 0} clip terkirim
-                    {!event.campaign.funded && " · dana kampanye belum disetor penyelenggara"}
+                    {campaign.data?.participants.length ?? 0} {plural(campaign.data?.participants.length ?? 0, "clipper")} joined · {campaign.data?.clips.length ?? 0} {plural(campaign.data?.clips.length ?? 0, "clip")} submitted
+                    {!event.campaign.funded && " · campaign funds not yet deposited by the organizer"}
                   </p>
 
                   {isOwner ? (
                     <Link href={`/organizer/events/${event.id}`} className="inline-block text-[#9CFF1E] font-semibold underline underline-offset-4">
-                      Kelola kampanye ini
+                      Manage this campaign
                     </Link>
                   ) : joined ? (
                     <div className="space-y-3">
-                      <p className="flex items-center gap-2 text-[#9CFF1E] font-semibold"><Check className="w-4 h-4" /> Kamu sudah jadi clipper</p>
+                      <p className="flex items-center gap-2 text-[#9CFF1E] font-semibold"><Check className="w-4 h-4" /> You&apos;re a clipper</p>
                       <div className="flex items-center gap-3 rounded-2xl border border-dashed border-[#9CFF1E]/60 px-4 py-3">
                         <span className="flex-1 min-w-0 truncate font-mono text-xs text-[#9CFF1E]">{refLink}</span>
                         <button onClick={copyRef} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#9CFF1E] text-[#141414] text-xs font-semibold shrink-0">
-                          {copied ? <><Check className="w-3.5 h-3.5" /> Tersalin</> : <><Copy className="w-3.5 h-3.5" /> Salin link</>}
+                          {copied ? <><Check className="w-3.5 h-3.5" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy link</>}
                         </button>
                       </div>
                       <Link href="/dashboard/campaigns" className="inline-block text-sm text-[#9CFF1E] underline underline-offset-4">
-                        Kirim clip dan lihat hasilmu
+                        Submit a clip and see your earnings
                       </Link>
                     </div>
                   ) : (
@@ -279,7 +279,7 @@ function EventDetail() {
                       disabled={joining || ended || !event.campaign.funded}
                       className="px-7 py-3 rounded-full bg-[#9CFF1E] text-[#141414] font-semibold disabled:opacity-40"
                     >
-                      {!accountId ? "Hubungkan wallet untuk ikut" : joining ? "Menunggu wallet…" : "Ikut kampanye"}
+                      {!accountId ? "Connect wallet to join" : joining ? "Waiting for wallet…" : "Join campaign"}
                     </button>
                   )}
                   {joinMsg && <p className="text-sm text-white/70">{joinMsg}</p>}
@@ -297,7 +297,7 @@ function EventDetail() {
                 </div>
 
                 <div className="space-y-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-accent-ink leading-none">Pilih pass</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-accent-ink leading-none">Choose a pass</p>
                   {event.tiers.map((t) => {
                     const active = t.id === selectedTier?.id;
                     return (
@@ -322,14 +322,14 @@ function EventDetail() {
                 {/* Rincian harga dari kontrak */}
                 {selectedTier && selectedTier.price > 0 && q && (
                   <div className="space-y-2 pt-4 border-t border-on-background/10 text-sm">
-                    <Row label="Harga tiket" value={fmtUsdc(q.price)} />
+                    <Row label="Ticket price" value={fmtUsdc(q.price)} />
                     {event.feeBearer === "BUYER" ? (
                       <>
-                        <Row label="Biaya layanan (3,4%)" value={fmtUsdc(q.platform_fee)} />
-                        {Number(q.promo_fee) > 0 && <Row label="Biaya promosi" value={fmtUsdc(q.promo_fee)} />}
+                        <Row label="Service fee (3.4%)" value={fmtUsdc(q.platform_fee)} />
+                        {Number(q.promo_fee) > 0 && <Row label="Promo fee" value={fmtUsdc(q.promo_fee)} />}
                       </>
                     ) : (
-                      <p className="text-xs text-text-muted">Biaya layanan ditanggung penyelenggara.</p>
+                      <p className="text-xs text-text-muted">The organizer covers the service fee.</p>
                     )}
                     <div className="flex justify-between items-baseline pt-2 border-t border-on-background/10">
                       <span className="font-bold">Total</span>
@@ -344,22 +344,22 @@ function EventDetail() {
                 {canBuy ? (
                   <Link href={checkoutHref} className="block">
                     <button className="w-full py-5 bg-primary text-on-primary font-bold uppercase tracking-[0.2em] rounded-full hover:bg-accent hover:text-[#141414] transition-all shadow-lg flex items-center justify-center gap-2 text-xs">
-                      Beli pass <ChevronRight className="w-4 h-4" />
+                      Buy pass <ChevronRight className="w-4 h-4" />
                     </button>
                   </Link>
                 ) : (
                   <div className="w-full py-5 rounded-full bg-on-background/10 text-text-muted font-bold uppercase tracking-[0.15em] text-center text-xs">
-                    {ended ? "Event selesai" : soldOut ? "Tiket habis" : "Menunggu dana kampanye"}
+                    {ended ? "Event ended" : soldOut ? "Sold out" : "Waiting for campaign funding"}
                   </div>
                 )}
               </div>
 
               <div className="p-6 bg-accent/5 border border-accent/15 rounded-2xl space-y-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-accent-ink">Yang kamu dapat</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-accent-ink">What you get</p>
                 <ul className="space-y-3 text-sm text-text-muted">
-                  <li className="flex gap-3"><ScanLine className="w-4 h-4 text-accent-ink shrink-0 mt-0.5" /> NFT pass <span className="font-mono">{event.code}-0001</span> di wallet-mu, discan di pintu masuk. Tanpa KTP.</li>
-                  <li className="flex gap-3"><Stamp className="w-4 h-4 text-accent-ink shrink-0 mt-0.5" /> Setelah discan jadi lencana permanen (+{event.stamps} stempel).</li>
-                  <li className="flex gap-3"><MessagesSquare className="w-4 h-4 text-accent-ink shrink-0 mt-0.5" /> Lencana membuka obrolan, voting, dan reward komunitas.</li>
+                  <li className="flex gap-3"><ScanLine className="w-4 h-4 text-accent-ink shrink-0 mt-0.5" /> Pass NFT <span className="font-mono">{event.code}-0001</span> in your wallet, scanned at the door. No ID card.</li>
+                  <li className="flex gap-3"><Stamp className="w-4 h-4 text-accent-ink shrink-0 mt-0.5" /> Once scanned, it becomes a permanent badge (+{event.stamps} {plural(event.stamps, "stamp")}).</li>
+                  <li className="flex gap-3"><MessagesSquare className="w-4 h-4 text-accent-ink shrink-0 mt-0.5" /> The badge unlocks community chat, voting, and rewards.</li>
                 </ul>
               </div>
             </div>

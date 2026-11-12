@@ -27,7 +27,7 @@ export function LevelLadder({ stamps }: { stamps: number }) {
                 <Lock className="w-4 h-4 text-text-muted" />
               )}
             </div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">{l.min} stempel</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">{l.min} stamps</p>
             <ul className="space-y-1.5 text-xs text-text-muted leading-snug">
               {l.perks.map((p) => (
                 <li key={p}>{p}</li>

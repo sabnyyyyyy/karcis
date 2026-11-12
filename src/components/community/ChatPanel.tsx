@@ -11,7 +11,7 @@ import { useChatStore, MAX_LEN } from "@/store/useChatStore";
 const serif = "font-[family-name:var(--font-logo)] italic";
 
 const timeOf = (at: number) =>
-  at ? new Date(at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) : "";
+  at ? new Date(at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) : "";
 
 const initialOf = (name: string) => (name.trim()[0] ?? "?").toUpperCase();
 
@@ -71,7 +71,7 @@ export function ChatPanel({ stamps, accountId, name }: { stamps: number; account
       {/* Daftar ruang */}
       <aside className="bg-[#FBFCF7] border-b lg:border-b-0 lg:border-r border-[#141414]/10 flex flex-col">
         <div className="hidden lg:flex items-center justify-between px-6 pt-6 pb-4">
-          <span className="text-[11px] tracking-[0.22em] uppercase text-[#141414]/50">Ruang</span>
+          <span className="text-[11px] tracking-[0.22em] uppercase text-[#141414]/50">Room</span>
           <span className="h-px w-10 bg-[#141414]/15" />
         </div>
 
@@ -112,7 +112,7 @@ export function ChatPanel({ stamps, accountId, name }: { stamps: number; account
                   {isLocked ? (
                     <span className="mt-2.5 block">
                       <span className="flex items-center gap-1.5 text-[11.5px] text-[#141414]/55">
-                        <Lock className="w-3 h-3" strokeWidth={1.75} /> Butuh {rMin} stempel
+                        <Lock className="w-3 h-3" strokeWidth={1.75} /> Needs {rMin} stamps
                       </span>
                       <span className="mt-2 block h-[3px] rounded-full bg-[#141414]/10 overflow-hidden">
                         <span className="block h-full rounded-full bg-[#9CFF1E]" style={{ width: `${pct}%` }} />
@@ -124,7 +124,7 @@ export function ChatPanel({ stamps, accountId, name }: { stamps: number; account
                         <span className="absolute inset-0 rounded-full bg-[#5FB800] opacity-60 animate-ping" />
                         <span className="relative w-2 h-2 rounded-full bg-[#5FB800]" />
                       </span>
-                      Terbuka
+                      Unlocked
                     </span>
                   )}
                 </span>
@@ -135,10 +135,10 @@ export function ChatPanel({ stamps, accountId, name }: { stamps: number; account
 
         {/* Total stempel */}
         <div className="hidden lg:block mt-auto border-t border-[#141414]/10 px-6 py-5">
-          <p className="text-[11px] tracking-[0.2em] uppercase text-[#141414]/50">Stempelmu</p>
+          <p className="text-[11px] tracking-[0.2em] uppercase text-[#141414]/50">Your stamps</p>
           <p className="mt-1 flex items-baseline gap-2">
             <span className={cn(serif, "text-[40px] leading-none")}>{stamps}</span>
-            <span className="text-[12.5px] text-[#141414]/55">stempel terkumpul</span>
+            <span className="text-[12.5px] text-[#141414]/55">stamps collected</span>
           </p>
         </div>
       </aside>
@@ -163,7 +163,7 @@ export function ChatPanel({ stamps, accountId, name }: { stamps: number; account
             )}
           >
             {locked ? <Lock className="w-3 h-3" strokeWidth={1.75} /> : <span className="w-1.5 h-1.5 rounded-full bg-[#5FB800]" />}
-            {locked ? "Terkunci" : "Terbuka"}
+            {locked ? "Locked" : "Unlocked"}
           </span>
         </div>
 
@@ -187,10 +187,10 @@ export function ChatPanel({ stamps, accountId, name }: { stamps: number; account
               </div>
 
               <div className="space-y-3">
-                <p className={cn(serif, "text-[32px] leading-none tracking-[-0.01em]")}>Ruang ini masih terkunci</p>
+                <p className={cn(serif, "text-[32px] leading-none tracking-[-0.01em]")}>This room is still locked</p>
                 <p className="text-[15px] leading-relaxed text-[#141414]/60 max-w-[38ch] mx-auto">
-                  Butuh <b className="font-semibold text-[#141414]">{min} stempel</b>. Kamu punya {stamps}, tinggal{" "}
-                  <b className="font-semibold text-[#141414]">{min - stamps} lagi</b>. Datangi acara dan scan pass-mu di pintu masuk.
+                  Needs <b className="font-semibold text-[#141414]">{min} stamps</b>. You have {stamps}, only{" "}
+                  <b className="font-semibold text-[#141414]">{min - stamps} more</b>. Go to an event and scan your pass at the door.
                 </p>
               </div>
 
@@ -202,7 +202,7 @@ export function ChatPanel({ stamps, accountId, name }: { stamps: number; account
                   ))}
                 </div>
                 <p className="text-[11px] tracking-[0.2em] uppercase text-[#141414]/45">
-                  {stamps} / {min} stempel
+                  {stamps} / {min} stamps
                 </p>
               </div>
 
@@ -210,7 +210,7 @@ export function ChatPanel({ stamps, accountId, name }: { stamps: number; account
                 href="/events"
                 className="group inline-flex items-center gap-3 pl-6 pr-2 py-2 rounded-full bg-[#141414] text-white text-[13px] font-medium tracking-wide hover:bg-[#2a2a2a] transition-colors"
               >
-                Cari event
+                Find events
                 <span className="w-8 h-8 rounded-full bg-[#9CFF1E] text-[#141414] flex items-center justify-center">
                   <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </span>
@@ -246,7 +246,7 @@ export function ChatPanel({ stamps, accountId, name }: { stamps: number; account
                     )}
                     <div className={cn("flex flex-col max-w-[78%]", mine ? "items-end" : "items-start")}>
                       <span className="text-[11px] tracking-wide text-[#141414]/45 mb-1.5 px-1">
-                        {mine ? "Kamu" : m.name} · {timeOf(m.at)}
+                        {mine ? "You" : m.name} · {timeOf(m.at)}
                       </span>
                       <p
                         className={cn(
@@ -269,7 +269,7 @@ export function ChatPanel({ stamps, accountId, name }: { stamps: number; account
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   maxLength={MAX_LEN}
-                  placeholder={`Tulis di ${room.title.toLowerCase()}…`}
+                  placeholder={`Write in ${room.title.toLowerCase()}…`}
                   className="flex-1 min-w-0 bg-transparent py-2 text-[15px] outline-none placeholder:text-[#141414]/35"
                 />
                 {nearLimit && (
@@ -280,7 +280,7 @@ export function ChatPanel({ stamps, accountId, name }: { stamps: number; account
                 <button
                   type="submit"
                   disabled={!text.trim()}
-                  aria-label="Kirim"
+                  aria-label="Send"
                   className="w-11 h-11 shrink-0 rounded-full bg-[#9CFF1E] text-[#141414] flex items-center justify-center transition-colors hover:bg-[#141414] hover:text-[#9CFF1E] disabled:opacity-35 disabled:hover:bg-[#9CFF1E] disabled:hover:text-[#141414]"
                 >
                   <ArrowUp className="w-5 h-5" strokeWidth={2} />

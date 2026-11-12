@@ -116,7 +116,7 @@ export const NearWalletProvider = ({ children }: { children: React.ReactNode }) 
   const sendTransactions = useCallback(
     async (txs: PreparedTx[], options: SendOptions = {}) => {
       const selector = selectorRef.current;
-      if (!selector || !selector.isSignedIn()) throw new ChainError("Hubungkan wallet dulu.");
+      if (!selector || !selector.isSignedIn()) throw new ChainError("Connect your wallet first.");
       if (txs.length === 0) return undefined;
       const wallet = await selector.wallet();
 

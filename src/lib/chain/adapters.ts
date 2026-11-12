@@ -3,6 +3,22 @@ import type { Pass } from "@/types/pass";
 import { nsToIso, nsToMs } from "./format";
 import type { ChainEvent, ChainPass } from "./types";
 
+/** Event lama di chain memakai kategori berbahasa Indonesia; tampilkan dalam bahasa Inggris. */
+const CATEGORY_ALIASES: Record<string, string> = { PAMERAN: "EXPO", KOMUNITAS: "COMMUNITY", SEMUA: "ALL" };
+const normalizeCategory = (c: string | undefined) => {
+  const up = (c || "COMMUNITY").toUpperCase();
+  return CATEGORY_ALIASES[up] ?? up;
+};
+
+/** Tanggal yang tersimpan di chain bisa berbahasa Indonesia; ubah nama bulannya ke bahasa Inggris. */
+const MONTHS: [RegExp, string][] = [
+  [/Sebentar lagi/gi, "Soon"],
+  [/\bJanuari\b/gi, "January"], [/\bFebruari\b/gi, "February"], [/\bMaret\b/gi, "March"], [/\bMei\b/gi, "May"],
+  [/\bJuni\b/gi, "June"], [/\bJuli\b/gi, "July"], [/\bAgustus\b/gi, "August"], [/\bOktober\b/gi, "October"],
+  [/\bDesember\b/gi, "December"], [/\bAgu\b/gi, "Aug"], [/\bOkt\b/gi, "Oct"], [/\bDes\b/gi, "Dec"],
+];
+const englishDate = (s: string) => MONTHS.reduce((acc, [re, en]) => acc.replace(re, en), s);
+
 /** Event dari kontrak -> bentuk yang dipakai UI */
 export function toUiEvent(e: ChainEvent): CommunityEvent {
   return {
@@ -10,12 +26,12 @@ export function toUiEvent(e: ChainEvent): CommunityEvent {
     code: e.code,
     title: e.title,
     organizer: e.organizer_name,
-    category: (e.category || "KOMUNITAS").toUpperCase(),
+    category: normalizeCategory(e.category),
     city: e.city,
     venue: e.venue,
     address: e.address,
-    dateLabel: e.date_label,
-    dateFull: e.date_full,
+    dateLabel: englishDate(e.date_label),
+    dateFull: englishDate(e.date_full),
     time: e.time,
     image: e.image,
     description: e.description,

@@ -24,8 +24,8 @@ export default function OverviewPage() {
   // Riwayat sederhana dari pass yang ada
   const activity = passes
     .flatMap((p) => [
-      { at: p.mintedAt, label: "Pass diterbitkan", event: p.eventTitle },
-      ...(p.checkedInAt ? [{ at: p.checkedInAt, label: `Stempel +${p.stamps}`, event: p.eventTitle }] : []),
+      { at: p.mintedAt, label: "Pass issued", event: p.eventTitle },
+      ...(p.checkedInAt ? [{ at: p.checkedInAt, label: `Stamp +${p.stamps}`, event: p.eventTitle }] : []),
     ])
     .sort((a, b) => +new Date(b.at) - +new Date(a.at))
     .slice(0, 5);
@@ -34,18 +34,18 @@ export default function OverviewPage() {
     <div className="space-y-12">
       <section className="space-y-2">
         <ScrollReveal>
-          <p className="text-[11px] font-bold text-accent-ink uppercase tracking-widest leading-none">Paspor</p>
+          <p className="text-[11px] font-bold text-accent-ink uppercase tracking-widest leading-none">Passport</p>
           <h1 className="font-bodoni text-3xl md:text-4xl font-black tracking-tight text-primary">
-            Halo, <span className="text-accent-ink">{profile?.name || "Tamu"}</span>
+            Hello, <span className="text-accent-ink">{profile?.name || "Guest"}</span>
           </h1>
         </ScrollReveal>
       </section>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Pass aktif", value: String(active.length), icon: Ticket },
-          { label: "Lencana", value: String(badges.length), icon: Award },
-          { label: "Stempel", value: String(stamps), icon: Stamp },
+          { label: "Active passes", value: String(active.length), icon: Ticket },
+          { label: "Badges", value: String(badges.length), icon: Award },
+          { label: "Stamps", value: String(stamps), icon: Stamp },
           { label: "Level", value: level.name, icon: Award },
         ].map((stat, i) => (
           <ScrollReveal key={stat.label} delay={i * 0.05}>
@@ -63,16 +63,16 @@ export default function OverviewPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
         <div className="lg:col-span-8 space-y-6">
           <div className="flex justify-between items-end border-b border-on-background/5 pb-4">
-            <h2 className="font-bodoni text-xl font-bold tracking-tight">Pass aktif</h2>
+            <h2 className="font-bodoni text-xl font-bold tracking-tight">Active passes</h2>
             <Link href="/dashboard/tickets" className="text-[11px] font-bold text-accent-ink hover:text-primary transition-all uppercase tracking-widest">
-              Semua koleksi <ChevronRight className="inline w-3 h-3" />
+              All collection <ChevronRight className="inline w-3 h-3" />
             </Link>
           </div>
 
           {active.length === 0 ? (
             <div className="p-10 border border-dashed border-on-background/15 rounded-2xl text-center text-text-muted space-y-3">
-              <p>Belum ada pass aktif.</p>
-              <Link href="/events" className="text-accent-ink font-bold underline underline-offset-4">Cari event</Link>
+              <p>No active passes yet.</p>
+              <Link href="/events" className="text-accent-ink font-bold underline underline-offset-4">Find events</Link>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4">
@@ -92,7 +92,7 @@ export default function OverviewPage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 text-accent-ink text-[11px] font-bold uppercase tracking-widest pt-4 border-t border-on-background/5 mt-4">
-                          <ScanLine className="w-3.5 h-3.5" /> Buka QR pintu masuk <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                          <ScanLine className="w-3.5 h-3.5" /> Open door QR <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                         </div>
                       </div>
                     </div>
@@ -105,27 +105,27 @@ export default function OverviewPage() {
 
         <div className="lg:col-span-4 space-y-6">
           <div className="border-b border-on-background/5 pb-4">
-            <h2 className="font-bodoni text-xl font-bold tracking-tight">Aktivitas</h2>
+            <h2 className="font-bodoni text-xl font-bold tracking-tight">Activity</h2>
           </div>
           <div className="bg-surface border border-on-background/5 rounded-2xl overflow-hidden shadow-sm divide-y divide-on-background/5">
-            {activity.length === 0 && <p className="p-5 text-sm text-text-muted">Belum ada aktivitas.</p>}
+            {activity.length === 0 && <p className="p-5 text-sm text-text-muted">No activity yet.</p>}
             {activity.map((a, i) => (
               <div key={i} className="p-5 space-y-1">
                 <p className={cn("text-sm font-bold", a.label.startsWith("Stempel") ? "text-accent-coral" : "text-primary")}>{a.label}</p>
                 <p className="text-[11px] text-text-muted uppercase tracking-widest font-bold">
-                  {a.event} · {new Date(a.at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                  {a.event} · {new Date(a.at).toLocaleDateString("en-US", { day: "numeric", month: "short" })}
                 </p>
               </div>
             ))}
           </div>
 
           <div className="p-6 bg-accent/5 border border-accent/15 rounded-2xl space-y-2">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-accent-ink">Menuju level berikutnya</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-accent-ink">Toward the next level</p>
             <p className="text-sm text-text-muted">
-              {next ? `${next.min - stamps} stempel lagi untuk jadi ${next.name}.` : "Kamu sudah di level tertinggi."}
+              {next ? `${next.min - stamps} more stamps to become ${next.name}.` : "You're at the top level."}
             </p>
             <Link href="/dashboard/passport" className="inline-block text-sm text-accent-ink font-semibold underline underline-offset-4">
-              Lihat paspor
+              View passport
             </Link>
           </div>
         </div>

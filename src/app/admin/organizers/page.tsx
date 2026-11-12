@@ -17,11 +17,11 @@ const statusStyle = {
   SUSPENDED: "bg-[#FFF4D6] text-[#6b4e00]",
   BANNED: "bg-[#FFE5E6] text-[#9b1c22]",
 } as const;
-const statusLabel = { ACTIVE: "Aktif", SUSPENDED: "Ditangguhkan", BANNED: "Diblokir" } as const;
-const kindLabel = { REPORT: "Laporan", SUSPEND: "Ditangguhkan", BAN: "Diblokir", REINSTATE: "Dipulihkan", PROFILEUPDATE: "Profil diubah" } as const;
+const statusLabel = { ACTIVE: "Active", SUSPENDED: "Suspended", BANNED: "Banned" } as const;
+const kindLabel = { REPORT: "Report", SUSPEND: "Suspended", BAN: "Banned", REINSTATE: "Reinstated", PROFILEUPDATE: "Profile updated" } as const;
 
 const fmtDate = (ns: string) =>
-  new Date(nsToMs(ns)).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  new Date(nsToMs(ns)).toLocaleString("en-US", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
 /** Pelacakan penyelenggara: semua pendaftar, laporan pembeli, dan tindakan admin. Hanya admin yang bisa bertindak. */
 export default function AdminOrganizersPage() {
@@ -44,27 +44,27 @@ export default function AdminOrganizersPage() {
         <div className="relative max-w-4xl mx-auto space-y-10">
           <div className="space-y-4">
             <Link href="/" className="inline-flex items-center gap-1 text-sm text-[#5C6157] hover:text-[#141414]">
-              <ChevronLeft className="w-4 h-4" /> Beranda
+              <ChevronLeft className="w-4 h-4" /> Home
             </Link>
-            <h1 className="text-[36px] md:text-[52px] font-extrabold tracking-[-0.04em] leading-none">Registri penyelenggara</h1>
+            <h1 className="text-[36px] md:text-[52px] font-extrabold tracking-[-0.04em] leading-none">Organizer registry</h1>
             <p className="text-[#5C6157] max-w-xl">
-              Semua penyelenggara dan riwayat kasusnya tercatat di kontrak NEAR. Siapa pun bisa membaca; hanya admin ({config.data?.admin ?? "-"}) yang bisa menangguhkan, memblokir, atau memulihkan.
+              All organizers and their case history are recorded on the NEAR contract. Anyone can read it; only the admin ({config.data?.admin ?? "-"}) can suspend, ban, or reinstate.
             </p>
           </div>
 
           {!accountId && (
-            <button onClick={signIn} className="px-8 py-3.5 rounded-full bg-[#9CFF1E] font-semibold">Hubungkan wallet admin</button>
+            <button onClick={signIn} className="px-8 py-3.5 rounded-full bg-[#9CFF1E] font-semibold">Connect admin wallet</button>
           )}
           {accountId && !isAdmin && (
             <p className="p-4 rounded-2xl bg-[#FFF4D6] text-[#6b4e00] text-sm">
-              Mode baca saja. Akun {shortAccount(accountId)} bukan admin, jadi tombol tindakan tidak tersedia.
+              Read-only mode. The account {shortAccount(accountId)} isn&apos;t the admin, so action buttons are unavailable.
             </p>
           )}
 
           {list.isLoading ? (
             <div className="h-40 rounded-3xl bg-[#F5F8EE] animate-pulse" />
           ) : sorted.length === 0 ? (
-            <p className="text-[#5C6157]">Belum ada penyelenggara terdaftar.</p>
+            <p className="text-[#5C6157]">No organizers registered yet.</p>
           ) : (
             <div className="space-y-4">
               {sorted.map((o) => (
@@ -87,12 +87,12 @@ function OrganizerRow({ org, canAct }: { org: ChainOrganizer; canAct: boolean })
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const act = async (key: string, tx: PreparedTx) => {
-    if (reason.trim().length < 5) return setMsg({ ok: false, text: "Isi alasan dulu (minimal 5 karakter)." });
+    if (reason.trim().length < 5) return setMsg({ ok: false, text: "Enter a reason first (at least 5 characters)." });
     setBusy(key);
     setMsg(null);
     try {
       await sendTransactions([tx], { callbackUrl: window.location.href });
-      setMsg({ ok: true, text: "Tindakan tercatat di kontrak." });
+      setMsg({ ok: true, text: "The action is recorded on the contract." });
       setReason("");
     } catch (e) {
       setMsg({ ok: false, text: explainChainError(e) });
@@ -114,7 +114,7 @@ function OrganizerRow({ org, canAct }: { org: ChainOrganizer; canAct: boolean })
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-[#5C6157]">{org.reports} laporan</span>
+          <span className="text-sm text-[#5C6157]">{org.reports} reports</span>
           <span className={cn("px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-widest", statusStyle[org.status])}>
             {statusLabel[org.status]}
           </span>
@@ -122,13 +122,13 @@ function OrganizerRow({ org, canAct }: { org: ChainOrganizer; canAct: boolean })
       </div>
 
       <button onClick={() => setOpen((v) => !v)} className="text-sm font-semibold text-[#3F7D00] underline underline-offset-4">
-        {open ? "Sembunyikan riwayat" : `Lihat riwayat (${org.cases.length})`}
+        {open ? "Hide history" : `View history (${org.cases.length})`}
       </button>
 
       {open && (
         <div className="space-y-4">
           {org.cases.length === 0 ? (
-            <p className="text-sm text-[#5C6157]">Belum ada catatan kasus.</p>
+            <p className="text-sm text-[#5C6157]">No case records yet.</p>
           ) : (
             <ul className="space-y-3">
               {org.cases.map((c, i) => (
@@ -150,23 +150,23 @@ function OrganizerRow({ org, canAct }: { org: ChainOrganizer; canAct: boolean })
                 rows={2}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="Alasan tindakan (tercatat permanen)"
+                placeholder="Reason for the action (recorded permanently)"
                 className="w-full rounded-2xl border border-[#141414]/15 px-4 py-3 text-sm outline-none focus:border-[#9CFF1E] focus:ring-2 focus:ring-[#9CFF1E]/40 resize-none"
               />
               <div className="flex flex-wrap gap-2">
                 {org.status === "ACTIVE" && (
                   <button disabled={busy !== null} onClick={() => act("suspend", suspendOrganizerTx(org.account_id, reason))} className={cn(btn, "border-[#F5D37A] bg-[#FFF4D6] text-[#6b4e00] hover:bg-[#F5D37A]")}>
-                    {busy === "suspend" ? "Menunggu wallet…" : "Tangguhkan"}
+                    {busy === "suspend" ? "Waiting for wallet…" : "Suspend"}
                   </button>
                 )}
                 {org.status !== "BANNED" && (
                   <button disabled={busy !== null} onClick={() => act("ban", banOrganizerTx(org.account_id, reason))} className={cn(btn, "border-[#F5A3A7] bg-[#FFE5E6] text-[#9b1c22] hover:bg-[#F5A3A7]")}>
-                    {busy === "ban" ? "Menunggu wallet…" : "Blokir"}
+                    {busy === "ban" ? "Waiting for wallet…" : "Ban"}
                   </button>
                 )}
                 {org.status !== "ACTIVE" && (
                   <button disabled={busy !== null} onClick={() => act("reinstate", reinstateOrganizerTx(org.account_id, reason))} className={cn(btn, "border-[#9CFF1E] bg-[#9CFF1E]/30 hover:bg-[#9CFF1E]")}>
-                    {busy === "reinstate" ? "Menunggu wallet…" : "Pulihkan"}
+                    {busy === "reinstate" ? "Waiting for wallet…" : "Reinstate"}
                   </button>
                 )}
               </div>

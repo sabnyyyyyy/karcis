@@ -12,24 +12,24 @@ export interface PassportLevel {
 
 // Urut naik. Sama dengan yang dijanjikan di landing page.
 export const LEVELS: PassportLevel[] = [
-  { key: "tamu", name: "Tamu", min: 0, perks: ["Beli pass event"] },
+  { key: "tamu", name: "Guest", min: 0, perks: ["Buy an event pass"] },
   {
     key: "pendatang",
-    name: "Pendatang",
+    name: "Newcomer",
     min: 1,
-    perks: ["Lencana kenang-kenangan permanen", "Obrolan umum komunitas"],
+    perks: ["Permanent keepsake badge", "Community general chat"],
   },
   {
     key: "langganan",
-    name: "Langganan",
+    name: "Regular",
     min: 3,
-    perks: ["Ruang obrolan privat sesama pengunjung", "Hak suara bintang tamu berikutnya"],
+    perks: ["Private chat room for fellow attendees", "Voting rights for the next guest star"],
   },
   {
     key: "penjaga",
-    name: "Penjaga Markas",
+    name: "Base Keeper",
     min: 5,
-    perks: ["Akses prioritas ruang diskusi kreator", "Diskon merchandise otomatis"],
+    perks: ["Priority access to the creators' discussion room", "Automatic merchandise discount"],
   },
 ];
 
@@ -45,11 +45,11 @@ export interface Perk {
 
 /** Akses komunitas yang terbuka lewat stempel (fiturnya dibangun bertahap) */
 export const PERKS: Perk[] = [
-  { key: "chat-umum", title: "Obrolan umum", desc: "Ruang ngobrol terbuka untuk semua pemegang lencana.", min: 1 },
-  { key: "chat-privat", title: "Obrolan privat", desc: "Ruang khusus sesama pengunjung yang sudah langganan.", min: 3 },
-  { key: "voting", title: "Voting bintang tamu", desc: "Ikut menentukan siapa yang tampil di acara berikutnya.", min: 3 },
-  { key: "prioritas", title: "Ruang kreator", desc: "Akses prioritas ke diskusi privat para pembuat karya.", min: 5 },
-  { key: "diskon", title: "Diskon merchandise", desc: "Potongan harga merch otomatis tanpa kode.", min: 5 },
+  { key: "chat-umum", title: "General chat", desc: "An open chat room for all badge holders.", min: 1 },
+  { key: "chat-privat", title: "Private chat", desc: "A room just for regular attendees.", min: 3 },
+  { key: "voting", title: "Guest star voting", desc: "Help decide who performs at the next event.", min: 3 },
+  { key: "prioritas", title: "Creators' room", desc: "Priority access to the private discussion among makers.", min: 5 },
+  { key: "diskon", title: "Merch discount", desc: "Automatic merch discount, no code needed.", min: 5 },
 ];
 
 export const totalStamps = (passes: Pass[]) =>
